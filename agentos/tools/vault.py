@@ -1,8 +1,11 @@
-"""Agno tool wrappers around ultra_brain modules.
+"""Plain-Python tool callables around ultra_brain modules.
 
-Each function below is `@tool`-decorated so Agno agents can call them. The
-underlying ultra_brain modules are NOT rewritten — these are thin adapters that
-normalize arguments and return JSON-serialisable payloads.
+Agno auto-wraps callables with type hints + docstrings into Function objects
+when added to an Agent's `tools=` list. We deliberately do NOT use the `@tool`
+decorator here — Agno 2.6.7 has a bug in `agno.os.utils.format_tools` that
+crashes when re-wrapping `Function` instances during dashboard introspection
+(TypeError: descriptor '__call__' for 'type' objects doesn't apply to a
+'Function' object).
 """
 
 from __future__ import annotations
@@ -11,14 +14,11 @@ import json
 import os
 from pathlib import Path
 
-from agno.tools import tool
-
 from ultra_brain import express, ingest, lint, monitor, query, research, review
 
 VAULT_ROOT = Path(os.environ.get("UAB_VAULT_PATH", "./vault")).expanduser().resolve()
 
 
-@tool
 def ingest_to_vault(source: str) -> str:
     """Extract content from a URL or local file and file it into the vault.
 
@@ -32,7 +32,6 @@ def ingest_to_vault(source: str) -> str:
     return str(getattr(result, "path", result))
 
 
-@tool
 def query_vault(question: str, *, max_hits: int = 5) -> str:
     """Search the vault and return cited answer.
 
@@ -46,7 +45,6 @@ def query_vault(question: str, *, max_hits: int = 5) -> str:
     return query.query_vault(question, vault_root=VAULT_ROOT, max_hits=max_hits)
 
 
-@tool
 def research_topic(topic: str, *, max_workers: int = 3) -> str:
     """Plan and execute multi-source research on a topic, file results in vault.
 
@@ -63,27 +61,23 @@ def research_topic(topic: str, *, max_workers: int = 3) -> str:
     return str(path)
 
 
-@tool
 def run_digest() -> str:
     """Generate today's daily digest of vault activity."""
     return express.daily_digest(VAULT_ROOT)
 
 
-@tool
 def run_review() -> str:
     """Run the weekly review across the vault."""
     path = review.write_weekly_review(VAULT_ROOT)
     return str(path)
 
 
-@tool
 def lint_vault() -> str:
     """Lint the vault for structural issues; returns JSON list of findings."""
     findings = lint.run_lint(VAULT_ROOT)
     return json.dumps([f.__dict__ for f in findings], default=str)
 
 
-@tool
 def poll_feeds() -> str:
     """Poll configured RSS feeds, score items against telos, file high-signal ones."""
     result = monitor.run_poll(vault_root=VAULT_ROOT)
