@@ -18,7 +18,7 @@ from ultra_brain import express, ingest, lint, monitor, query, research, review
 
 from .safety import assert_safe
 
-VAULT_ROOT = Path(os.environ.get("UAB_VAULT_PATH", "./vault")).expanduser().resolve()
+VAULT_ROOT = Path(os.environ.get("UAB_VAULT_PATH") or os.environ.get("SECOND_BRAIN_DIR") or "./vault").expanduser().resolve()
 
 
 # ---------------------------------------------------------------------------

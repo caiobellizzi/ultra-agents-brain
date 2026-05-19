@@ -26,6 +26,9 @@ from dotenv import load_dotenv
 # Needed because Agno's /continue endpoint REPLACES run_response.tools with the
 # payload, so we must echo back the full original dict plus `confirmed`.
 _PAUSED_TOOLS: dict[str, list[dict]] = {}
+# Tracks run_ids that have already been resolved (approved or denied) to
+# silently drop duplicate callback events (e.g. double-tap on Approve).
+_RESOLVED_RUNS: set[str] = set()
 
 load_dotenv()
 
@@ -252,6 +255,9 @@ async def handle_callback(
         return
 
     action, run_id, agent_id, tool_call_id = parts
+    if run_id in _RESOLVED_RUNS:
+        log.debug("Ignoring duplicate callback for already-resolved run %s", run_id)
+        return
     confirmed = action == "approve"
 
     # Resume the run via Agno's native /runs/{run_id}/continue endpoint.
@@ -296,6 +302,8 @@ async def handle_callback(
         log.warning("Continue returned %s: %s", r.status_code, r.text[:200])
         await send_message(client, chat_id, f"AgentOS error resuming run: {r.status_code}")
         return
+
+    _RESOLVED_RUNS.add(run_id)
 
     if not confirmed:
         await send_message(client, chat_id, "Action denied.")
