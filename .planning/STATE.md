@@ -40,6 +40,7 @@
 - 2026-05-19: Plan imported from `plans/continue-from-las-session-tender-wand.md` → `01-01-PLAN.md`
 - 2026-05-19: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md created via `/gsd:new-project`
 - 2026-05-19 02:25: **Wave 1 complete** — agno 2.6.7 + litellm 1.85.0 in `.venv`; `scripts/smoke_agno.py` proves Agno → LiteLLM (`:4000`) → LM Studio (`google/gemma-4-e4b`) end-to-end
+- 2026-05-19 02:50: **Wave 2 complete** — `agentos/` package (knowledge, tools/{vault,trust_gate}, 5 agents, FastAPI on :7000). Smoke POST /v1/agents/chat returned reply via Agno→LiteLLM→LM Studio. Git repo init; 8 commits.
 
 ## Wave 1 findings (must inform Wave 2)
 
