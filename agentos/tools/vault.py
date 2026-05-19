@@ -82,7 +82,7 @@ def query_vault(question: str, *, max_hits: int = 5) -> str:
     Returns:
         Synthesised answer with citations.
     """
-    return query.query_vault(question, vault_root=VAULT_ROOT, max_hits=max_hits)
+    return query.query_vault(question, vault_root=VAULT_ROOT, limit=max_hits)
 
 
 def run_digest() -> str:
