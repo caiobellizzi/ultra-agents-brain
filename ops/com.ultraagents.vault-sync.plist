@@ -7,6 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
+        <string>/bin/bash</string>
         <string>/Users/caiobellizzi/Documents/Projects/ultra-agents-brain/ops/sync-vault-to-vps.sh</string>
     </array>
 
