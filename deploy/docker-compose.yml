@@ -1,0 +1,49 @@
+services:
+  litellm:
+    image: ${LITELLM_IMAGE:-litellm/litellm:latest}
+    command: ["--config", "/app/config.yaml", "--host", "0.0.0.0", "--port", "4000"]
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      STORE_MODEL_IN_DB: "False"
+    network_mode: host
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+      - litellm-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=5)\nPY"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  hermes:
+    image: ${HERMES_IMAGE:-ghcr.io/nousresearch/hermes-agent:v2026.5.16}
+    command: ["--config", "/config/hermes.yaml"]
+    env_file:
+      - path: ../.env
+        required: false
+    depends_on:
+      litellm:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${HERMES_HTTP_PORT:-8787}:8787"
+    volumes:
+      - ./hermes/config.yaml:/config/hermes.yaml:ro
+      - ${HERMES_CONFIG_DIR:-/opt/ultra-agents-brain/hermes}:/hermes-config
+      - ${HERMES_SKILLS_DIR:-/opt/ultra-agents-brain/hermes/skills}:/hermes-config/skills
+      - ${HERMES_STATE_DIR:-/var/lib/ultra-agents-brain/hermes}:/var/lib/hermes
+      - ${SECOND_BRAIN_DIR:-/srv/second-brain}:/second-brain
+      - ${UAB_LOG_DIR:-/var/log/ultra-agents-brain}:/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "test -d /hermes-config/skills && test -d /second-brain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  litellm-data:

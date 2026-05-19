@@ -1,0 +1,14 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+*/15 * * * * uabrain /opt/ultra-agents-brain/scripts/health-check.sh --quiet
+5 8 * * * uabrain /opt/ultra-agents-brain/scripts/cost-check.sh
+15 7 * * 1 uabrain /opt/ultra-agents-brain/scripts/lint-check.sh
+# Daily briefing digest at 20:00
+0 20 * * * uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" digest
+# Weekly review every Sunday at 18:00
+0 18 * * 0 uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" review
+# Monitor RSS poll every 4 hours
+0 */4 * * * uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" monitor
+# Nightly vault lint at 02:00
+0 2 * * * uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" lint --report

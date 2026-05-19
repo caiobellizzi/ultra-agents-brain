@@ -1,0 +1,47 @@
+# Placeholder monitor feeds.
+#
+# These examples are intentionally disabled. The production list should be
+# derived from TELOS once `_system/telos.md` and `_system/telos/*.md` exist.
+# Until then, enable feeds manually and keep writes limited to `Inbox/`.
+
+defaults:
+  poll_interval_hours: 4
+  max_items_per_feed: 5
+  write_target: Inbox
+  auto_promote: false
+  relevance_model_tier: C
+  notes:
+    - "TELOS-derived feeds replace these placeholders later."
+    - "Deduplicate by canonical_url first, then content_hash."
+    - "Do not route private feeds to cloud models."
+
+feeds:
+  - name: Example AI Research Blog
+    url: https://example.com/ai-research/rss.xml
+    enabled: false
+    topic: ai-research
+    default_tags:
+      - ai
+      - research
+    trust_level: low
+    notes: "Replace with a TELOS-relevant source."
+
+  - name: Example Engineering Updates
+    url: https://example.com/engineering/feed.xml
+    enabled: false
+    topic: engineering-knowledge
+    default_tags:
+      - engineering
+      - tooling
+    trust_level: low
+    notes: "Use only after confirming signal quality."
+
+  - name: Example Personal Knowledge Management
+    url: https://example.com/pkm/rss.xml
+    enabled: false
+    topic: second-brain
+    default_tags:
+      - pkm
+      - second-brain
+    trust_level: low
+    notes: "Placeholder for TELOS-aligned knowledge management sources."

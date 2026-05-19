@@ -1,0 +1,91 @@
+# LiteLLM config — LM Studio primary (zero API cost in v1).
+#
+# Local dev:  LM_STUDIO_API_BASE=http://localhost:1234/v1
+# VPS access: set LM_STUDIO_API_BASE to the LM Link endpoint (LM Studio → LM Link tab)
+#
+# LM Studio serves whatever model is currently loaded. Set LM_STUDIO_MODEL to
+# the exact model identifier shown in LM Studio (e.g. "qwen3-32b-mlx" or
+# "lmstudio-community/qwen3-32b"). All tiers can share the same model while
+# you're testing; swap cheap-worker to a lighter model when you load one.
+
+model_list:
+  # Tier A — orchestrator: heavy model loaded in LM Studio
+  - model_name: orchestrator
+    litellm_params:
+      model: openai/google/gemma-4-e4b
+      api_base: os.environ/LM_STUDIO_API_BASE
+      api_key: os.environ/LM_STUDIO_API_KEY
+      timeout: 300
+      max_retries: 1
+    model_info:
+      mode: chat
+
+  # Tier B — default worker: same model (or lighter one if loaded)
+  - model_name: default-worker
+    litellm_params:
+      model: openai/google/gemma-4-e4b
+      api_base: os.environ/LM_STUDIO_API_BASE
+      api_key: os.environ/LM_STUDIO_API_KEY
+      timeout: 300
+      max_retries: 1
+    model_info:
+      mode: chat
+
+  # Tier C — cheap/fast worker: use LM_STUDIO_FAST_MODEL if you load a
+  # second lighter model in LM Studio; falls back to primary otherwise
+  - model_name: cheap-worker
+    litellm_params:
+      model: openai/google/gemma-4-e4b
+      api_base: os.environ/LM_STUDIO_API_BASE
+      api_key: os.environ/LM_STUDIO_API_KEY
+      timeout: 180
+      max_retries: 1
+    model_info:
+      mode: chat
+
+  # Tier D — private (same endpoint, local only)
+  - model_name: private-worker
+    litellm_params:
+      model: openai/google/gemma-4-e4b
+      api_base: os.environ/LM_STUDIO_API_BASE
+      api_key: os.environ/LM_STUDIO_API_KEY
+      timeout: 300
+      max_retries: 1
+    model_info:
+      mode: chat
+
+  # Cloud fallbacks — only when LM Studio is unreachable
+  - model_name: cloud-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+      timeout: 120
+      max_retries: 2
+    model_info:
+      mode: chat
+
+  - model_name: cloud-groq
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+      timeout: 90
+      max_retries: 2
+    model_info:
+      mode: chat
+
+litellm_settings:
+  request_timeout: 300
+  num_retries: 1
+  fallbacks:
+    - orchestrator: ["cloud-sonnet"]
+    - default-worker: ["cloud-sonnet", "cloud-groq"]
+    - cheap-worker: ["default-worker", "cloud-groq"]
+    - private-worker: ["cheap-worker"]
+  context_window_fallbacks:
+    - cheap-worker: ["default-worker"]
+    - default-worker: ["cloud-sonnet"]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  disable_spend_logs: false
+  store_model_in_db: false

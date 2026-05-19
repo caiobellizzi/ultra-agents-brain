@@ -1,0 +1,86 @@
+# Hermes Agent runtime template for ultra-agents-brain.
+# Pinned container tag: ghcr.io/nousresearch/hermes-agent:v2026.5.16
+
+runtime:
+  name: ultra-agents-brain
+  environment: production
+  data_dir: /var/lib/hermes
+  logs_dir: /logs/hermes
+  session_store:
+    type: sqlite
+    path: /var/lib/hermes/sessions.sqlite
+  memory_store:
+    type: sqlite
+    path: /var/lib/hermes/memory.sqlite
+
+models:
+  provider: openai-compatible
+  base_url: http://litellm:4000/v1
+  api_key_env: LITELLM_MASTER_KEY
+  orchestrator_model: orchestrator
+  default_worker_model: default-worker
+  cheap_worker_model: cheap-worker
+  private_worker_model: private-worker
+  fallback_model: fallback
+
+gateways:
+  telegram:
+    enabled: true
+    token_env: TELEGRAM_BOT_TOKEN
+    allowed_chat_ids_env: TELEGRAM_ALLOWED_CHAT_IDS
+    mode: webhook
+    webhook:
+      public_url_env: HERMES_TELEGRAM_WEBHOOK_URL
+      listen_host: 0.0.0.0
+      listen_port: 8787
+      path: /telegram/webhook
+      secret_token_env: TELEGRAM_WEBHOOK_SECRET
+
+skills:
+  directory: /hermes-config/skills
+  load:
+    - brain.ingest
+    - brain.query
+    - brain.lint
+    - brain.express
+    - brain.review
+    - telos.interview
+    - telos.check
+    - worker.research
+    - worker.monitor
+
+paths:
+  second_brain: /second-brain
+  inbox: /second-brain/Inbox
+  system: /second-brain/_system
+  cost_ledger: /second-brain/_system/cost-ledger.md
+  lint_report: /second-brain/_system/lint-report.md
+  persistent_workdir: /var/lib/hermes/work
+  artifact_dir: /var/lib/hermes/artifacts
+
+cron:
+  references:
+    host_crontab: /etc/cron.d/ultra-agents-brain
+    health_check: /opt/ultra-agents-brain/scripts/health-check.sh
+    cost_check: /opt/ultra-agents-brain/scripts/cost-check.sh
+    lint_check: /opt/ultra-agents-brain/scripts/lint-check.sh
+  jobs:
+    - name: health-check
+      schedule: "*/15 * * * *"
+      command: /opt/ultra-agents-brain/scripts/health-check.sh --quiet
+    - name: daily-cost-check
+      schedule: "5 8 * * *"
+      command: /opt/ultra-agents-brain/scripts/cost-check.sh
+    - name: weekly-brain-lint
+      schedule: "15 7 * * 1"
+      command: /opt/ultra-agents-brain/scripts/lint-check.sh
+
+mcp:
+  crawl4ai:
+    enabled: true
+    endpoint_env: CRAWL4AI_MCP_URL
+
+autonomy:
+  daily_usd_cap_env: DAILY_COST_CAP_USD
+  medium_risk_requires_telegram_approval: true
+  high_risk_actions: forbidden
