@@ -3,13 +3,13 @@
 **Updated:** 2026-05-19
 **Milestone:** v1.0
 **Current phase:** 01-ultra-brain-agno
-**Status:** ready_to_execute
+**Status:** wave_3_built_pending_smoke
 
 ## Position
 
 - **Phase 01** (`ultra-brain-agno`): in_progress, 1 plan, 0 summaries
 - **Plan 01-01** (`Build ultra-brain on Agno`): pending execution
-- **Next action:** `/gsd:execute-phase 1` (or `/gsd:execute-phase 1 --wave 1` to do one wave at a time)
+- **Next action:** User runs `channels/SMOKE.md` steps; then `/gsd:execute-phase 1 --wave 4`
 
 ## Decisions
 
@@ -41,6 +41,7 @@
 - 2026-05-19: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md created via `/gsd:new-project`
 - 2026-05-19 02:25: **Wave 1 complete** — agno 2.6.7 + litellm 1.85.0 in `.venv`; `scripts/smoke_agno.py` proves Agno → LiteLLM (`:4000`) → LM Studio (`google/gemma-4-e4b`) end-to-end
 - 2026-05-19 02:50: **Wave 2 complete** — `agentos/` package (knowledge, tools/{vault,trust_gate}, 5 agents, FastAPI on :7000). Smoke POST /v1/agents/chat returned reply via Agno→LiteLLM→LM Studio. Git repo init; 8 commits.
+- 2026-05-19 09:51: **Wave 3 adapter built** — channels/telegram_adapter.py ready. Manual smoke (3.2, 3.3) pending user.
 - 2026-05-19 03:10: **Dashboard wired** — switched `agentos/app.py` to `agno.os.app.AgentOS`; bound to `127.0.0.1:7001` (macOS AirPlay holds :7000); https://os.agno.com connects, lists 5 agents, chat works. Workaround for Wave 3+: do NOT use `@tool` decorator on tool callables — `agno.os.utils.format_tools` crashes on already-wrapped `Function` instances in 2.6.7. Pass plain Python callables with type hints + docstrings.
 
 ## Wave 1 findings (must inform Wave 2)
