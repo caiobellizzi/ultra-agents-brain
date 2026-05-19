@@ -1,0 +1,8 @@
+agno==2.6.7
+litellm==1.85.0
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-telegram-bot>=21.6
+markdown>=3.7
+sqlalchemy>=2.0
+aiosqlite>=0.20
