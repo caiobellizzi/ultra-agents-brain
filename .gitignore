@@ -11,3 +11,10 @@ __pycache__/
 *.db
 .venv/
 graphify-out/
+
+# Vault: keep PARA scaffolding (READMEs, MOCs, _system schema) but ignore
+# generated content. Ingested notes use a YYYY-MM-DD-slug.md filename.
+vault/**/20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.md
+vault/_system/log.md
+vault/_system/lint-report.md
+vault/.obsidian/
