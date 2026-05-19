@@ -22,10 +22,10 @@ EXCLUDES=(
   --exclude '_system/lint-report.md'
 )
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] pull VPS → Mac"
-/usr/bin/rsync -av --update "${EXCLUDES[@]}" "$REMOTE" "$LOCAL"
-
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] push Mac → VPS"
 /usr/bin/rsync -av --update --delete "${EXCLUDES[@]}" "$LOCAL" "$REMOTE"
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] pull VPS → Mac"
+/usr/bin/rsync -av --update "${EXCLUDES[@]}" "$REMOTE" "$LOCAL"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] done"
