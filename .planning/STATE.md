@@ -28,7 +28,7 @@
 
 | Risk | Mitigation |
 |------|-----------|
-| Agno API surface evolves | Pin exact version in `requirements.txt`; verify against current docs in Wave 1 |
+| Agno API surface evolves | Pin exact version in `requirements.txt`; verify against current docs in Wave 1. Note: agno 2.6.7 non-stream PAUSED response uses `requirements[]` not `active_requirements` (property, not serialized). |
 | Bot token still exposed from prior session | Rotate via BotFather `/revoke` after Wave 4 (REQ-204) |
 | AgentOS endpoint paths in cron services are illustrative | Confirm exact routes during Wave 2 build; update systemd `ExecStart` lines |
 | Two systemd services restart together on rsync | `systemctl restart uab-brain && sleep 5 && curl :7000/health` before restarting `uab-telegram` |
@@ -42,6 +42,7 @@
 - 2026-05-19 02:25: **Wave 1 complete** — agno 2.6.7 + litellm 1.85.0 in `.venv`; `scripts/smoke_agno.py` proves Agno → LiteLLM (`:4000`) → LM Studio (`google/gemma-4-e4b`) end-to-end
 - 2026-05-19 02:50: **Wave 2 complete** — `agentos/` package (knowledge, tools/{vault,trust_gate}, 5 agents, FastAPI on :7000). Smoke POST /v1/agents/chat returned reply via Agno→LiteLLM→LM Studio. Git repo init; 8 commits.
 - 2026-05-19 09:51: **Wave 3 adapter built** — channels/telegram_adapter.py ready. Manual smoke (3.2, 3.3) pending user.
+- 2026-05-19 ~11:17: **HITL fix** — replaced broken trust_gate with Agno @tool(requires_confirmation=True); /agents endpoint regression check passed; ingest runs now produce status=PAUSED with requirements[].tool_execution; adapter resumes via /runs/{run_id}/continue. Commit e010792.
 - 2026-05-19 03:10: **Dashboard wired** — switched `agentos/app.py` to `agno.os.app.AgentOS`; bound to `127.0.0.1:7001` (macOS AirPlay holds :7000); https://os.agno.com connects, lists 5 agents, chat works. Workaround for Wave 3+: do NOT use `@tool` decorator on tool callables — `agno.os.utils.format_tools` crashes on already-wrapped `Function` instances in 2.6.7. Pass plain Python callables with type hints + docstrings.
 
 ## Wave 1 findings (must inform Wave 2)
