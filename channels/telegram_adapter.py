@@ -22,6 +22,11 @@ from typing import Any
 import httpx
 from dotenv import load_dotenv
 
+# In-memory cache of paused tool_execution dicts, keyed by run_id.
+# Needed because Agno's /continue endpoint REPLACES run_response.tools with the
+# payload, so we must echo back the full original dict plus `confirmed`.
+_PAUSED_TOOLS: dict[str, list[dict]] = {}
+
 load_dotenv()
 
 logging.basicConfig(
@@ -104,11 +109,13 @@ async def send_approval_buttons(
     """
     keyboard_rows = []
     lines = ["Approval required for the following action(s):"]
+    cached_tools: list[dict] = []
 
     for req in requirements:
         tool_exec: dict = req.get("tool_execution") or {}
         if not tool_exec.get("requires_confirmation"):
             continue
+        cached_tools.append(tool_exec)
         tool_call_id: str = tool_exec.get("tool_call_id", "")
         tool_name: str = tool_exec.get("tool_name", "unknown")
         tool_args: dict = tool_exec.get("tool_args") or {}
@@ -132,6 +139,7 @@ async def send_approval_buttons(
         await send_message(client, chat_id, "Run paused — no confirmation requirements found.")
         return
 
+    _PAUSED_TOOLS[run_id] = cached_tools
     keyboard = {"inline_keyboard": keyboard_rows}
     await send_message(client, chat_id, "\n".join(lines), reply_markup=keyboard)
 
@@ -247,11 +255,31 @@ async def handle_callback(
     confirmed = action == "approve"
 
     # Resume the run via Agno's native /runs/{run_id}/continue endpoint.
-    # updated_tools is a JSON-encoded list so Agno can match by tool_call_id.
-    updated_tools = json.dumps([{"tool_call_id": tool_call_id, "confirmed": confirmed}])
+    # Agno REPLACES run_response.tools with this list, so we must echo back the
+    # full original ToolExecution dicts (tool_name, tool_args, etc.) and just
+    # flip `confirmed` on the matched one.
+    # Agno's handle_tool_call_updates requires BOTH requires_confirmation=True
+    # AND confirmed=True to execute the tool. Setting requires_confirmation=False
+    # skips the execution branch entirely. Keep the original flag, just flip
+    # `confirmed`.
+    cached = _PAUSED_TOOLS.pop(run_id, None)
+    if cached:
+        tools_list: list[dict] = []
+        for t in cached:
+            new = dict(t)
+            if new.get("tool_call_id") == tool_call_id:
+                new["confirmed"] = confirmed
+            tools_list.append(new)
+    else:
+        tools_list = [{
+            "tool_call_id": tool_call_id,
+            "confirmed": confirmed,
+            "requires_confirmation": True,
+        }]
+    tools_payload = json.dumps(tools_list)
     continue_url = f"{AGENTOS_BASE_URL}/agents/{agent_id}/runs/{run_id}/continue"
     continue_data = {
-        "updated_tools": updated_tools,
+        "tools": tools_payload,
         "stream": "false",
         "session_id": f"telegram-{chat_id}",
         "user_id": str(tg_user_id),
