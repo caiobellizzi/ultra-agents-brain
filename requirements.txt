@@ -6,3 +6,5 @@ python-telegram-bot>=21.6
 markdown>=3.7
 sqlalchemy>=2.0
 aiosqlite>=0.20
+httpx>=0.27,<0.29
+python-dotenv>=1.0
