@@ -36,6 +36,8 @@
 
 ## History
 
+- 2026-05-19 11:40: **Wave 3 HITL smoke green** — Telegram `/ingest https://anthropic.com` -> Approve button -> vault note written at `02-Resources/articles/`. Adapter fix (commit a244fd4): keep `requires_confirmation=True` and echo full ToolExecution dict on /continue; Agno only executes when both flags are True.
+
 - 2026-05-19: Codebase mapped (`.planning/codebase/` — 7 documents, 1,359 lines)
 - 2026-05-19: Plan imported from `plans/continue-from-las-session-tender-wand.md` → `01-01-PLAN.md`
 - 2026-05-19: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md created via `/gsd:new-project`
