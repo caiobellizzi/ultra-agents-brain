@@ -11,7 +11,7 @@ from agentos.tools.vault import query_vault
 chat_agent = Agent(
     name="chat",
     db=db,
-    model=chat_model("smart-worker"),
+    model=chat_model("default-worker"),
     tools=[query_vault],
     description="Conversational front-end. Cite the vault when relevant.",
     instructions=[
