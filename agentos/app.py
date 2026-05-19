@@ -1,90 +1,32 @@
-"""FastAPI host exposing all Agno agents over HTTP.
+"""AgentOS host — uses Agno's built-in AgentOS class.
 
-Channels (Telegram adapter, cron timers) call these endpoints. There is no
-auth — the service binds to 127.0.0.1 only; channel adapters are responsible
-for upstream authentication.
+Exposes the standard Agno route surface (agents, sessions, runs, memory,
+knowledge, approvals) so the hosted dashboard at https://os.agno.com works,
+plus any third-party tools that speak the AgentOS HTTP schema.
+
+Channels (Telegram adapter, cron timers) call `POST /agents/{agent_id}/runs`
+with a JSON body — not our previous `/v1/agents/<name>` shape.
 """
 
 from __future__ import annotations
 
-import logging
-from typing import Any
-
-from fastapi import FastAPI
-from pydantic import BaseModel
+from agno.os.app import AgentOS
 
 from agentos.agents.chat import chat_agent
 from agentos.agents.curator import curator_agent
 from agentos.agents.ingest import ingest_agent
 from agentos.agents.query import query_agent
 from agentos.agents.research import research_agent
+from agentos.db import db
+from agentos.knowledge import kb
 
-log = logging.getLogger("agentos")
+agent_os = AgentOS(
+    name="ultra-brain",
+    description="Second-brain agents over a markdown vault.",
+    db=db,
+    agents=[chat_agent, ingest_agent, query_agent, research_agent, curator_agent],
+    knowledge=[kb.knowledge],
+    cors_allowed_origins=["https://os.agno.com", "http://localhost:3000"],
+)
 
-app = FastAPI(title="ultra-brain AgentOS", version="0.1.0")
-
-
-class AgentRequest(BaseModel):
-    message: str
-    session_id: str | None = None
-    user_id: str | None = None
-    metadata: dict[str, Any] | None = None
-
-
-class AgentResponse(BaseModel):
-    content: str
-    session_id: str | None = None
-    agent: str
-
-
-_AGENTS = {
-    "chat": chat_agent,
-    "ingest": ingest_agent,
-    "query": query_agent,
-    "research": research_agent,
-    "curator": curator_agent,
-}
-
-
-def _run(agent_name: str, req: AgentRequest) -> AgentResponse:
-    agent = _AGENTS[agent_name]
-    run_response = agent.run(
-        req.message,
-        session_id=req.session_id,
-        user_id=req.user_id,
-    )
-    return AgentResponse(
-        content=run_response.content or "",
-        session_id=run_response.session_id,
-        agent=agent_name,
-    )
-
-
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
-
-
-@app.post("/v1/agents/chat", response_model=AgentResponse)
-def chat(req: AgentRequest) -> AgentResponse:
-    return _run("chat", req)
-
-
-@app.post("/v1/agents/ingest", response_model=AgentResponse)
-def ingest(req: AgentRequest) -> AgentResponse:
-    return _run("ingest", req)
-
-
-@app.post("/v1/agents/query", response_model=AgentResponse)
-def query(req: AgentRequest) -> AgentResponse:
-    return _run("query", req)
-
-
-@app.post("/v1/agents/research", response_model=AgentResponse)
-def research(req: AgentRequest) -> AgentResponse:
-    return _run("research", req)
-
-
-@app.post("/v1/agents/curator", response_model=AgentResponse)
-def curator(req: AgentRequest) -> AgentResponse:
-    return _run("curator", req)
+app = agent_os.get_app()
