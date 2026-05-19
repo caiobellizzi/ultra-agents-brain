@@ -1,7 +1,8 @@
 """Ingest agent — extracts content from URLs/files and writes to vault.
 
-Vault writes are routed through the trust gate so medium-risk paths
-(01-Areas, _system, 03-Archives) require Telegram approval before commit.
+ingest_to_vault is decorated with @tool(requires_confirmation=True) so Agno
+pauses the run and returns status=paused with active_requirements. The Telegram
+adapter resumes via POST /runs/{run_id}/continue.
 """
 
 from __future__ import annotations
@@ -10,10 +11,7 @@ from agno.agent import Agent
 
 from agentos.db import db
 from agentos.model import chat_model
-from agentos.tools.trust_gate import trust_gate
-from agentos.tools.vault import ingest_to_vault as _raw_ingest
-
-ingest_to_vault = trust_gate("write note to vault", target_path_arg="source")(_raw_ingest)
+from agentos.tools.vault import ingest_to_vault
 
 ingest_agent = Agent(
     name="ingest",

@@ -82,29 +82,70 @@ Expected: A research summary reply.
 
 ---
 
-## Expected approval payload
+## Expected HITL payload (Agno native contract)
 
-When a run is paused for HITL approval, AgentOS returns JSON with this shape:
+When a run is paused for HITL approval, AgentOS returns JSON with this shape
+(non-stream path, `stream=false`):
 
 ```json
 {
   "status": "PAUSED",
   "run_id": "<uuid>",
-  "approval_id": "<uuid>",
-  "approval_prompt": "Trust-gate: write note to vault (source=https://anthropic.com). Approve?"
+  "requirements": [
+    {
+      "id": "<uuid>",
+      "created_at": "2026-...",
+      "tool_execution": {
+        "tool_call_id": "686188173",
+        "tool_name": "ingest_to_vault",
+        "tool_args": {"source": "https://anthropic.com"},
+        "requires_confirmation": true,
+        "confirmed": null,
+        "result": null
+      }
+    }
+  ],
+  "tools": [
+    {
+      "tool_call_id": "686188173",
+      "tool_name": "ingest_to_vault",
+      "requires_confirmation": true,
+      ...
+    }
+  ]
 }
 ```
 
-| Field            | Type   | Description                                              |
-|------------------|--------|----------------------------------------------------------|
-| `status`         | string | Must be `"PAUSED"` for HITL flow to trigger             |
-| `run_id`         | string | The Agno run UUID — used in `/agents/{id}/runs/{run_id}/continue` |
-| `approval_id`    | string | The approval UUID — used in `/approvals/{id}/resolve`   |
-| `approval_prompt`| string | Human-readable description of what requires approval     |
+| Field                               | Type    | Description                                                        |
+|-------------------------------------|---------|--------------------------------------------------------------------|
+| `status`                            | string  | `"PAUSED"` (uppercase) — the adapter checks this                  |
+| `run_id`                            | string  | Run UUID — used in `/agents/{id}/runs/{run_id}/continue`           |
+| `requirements`                      | list    | One entry per HITL requirement pending resolution                  |
+| `requirements[].tool_execution`     | dict    | The paused tool call                                               |
+| `tool_execution.tool_call_id`       | string  | Echoed back in the continue body                                   |
+| `tool_execution.tool_name`          | string  | Name of the tool requiring confirmation                            |
+| `tool_execution.tool_args`          | dict    | Arguments the LLM passed to the tool                              |
+| `tool_execution.requires_confirmation` | bool | `true` = render approve/deny buttons                              |
 
-Compare real AgentOS responses against this during smoke to catch schema drift.
-If `approval_id` or `run_id` are missing, the adapter will surface empty strings
-and the continue call will 404 — update `trust_gate.py` to include them.
+Note: `is_paused` and `active_requirements` are Python properties on `RunOutput` and
+are NOT serialized into the response. Use `status == "PAUSED"` and `requirements[]`.
+
+### Resume request (POST /agents/{agent_id}/runs/{run_id}/continue)
+
+Sent as form-data:
+
+```
+updated_tools = [{"tool_call_id": "686188173", "confirmed": true}]
+stream        = false
+session_id    = telegram-<chat_id>
+user_id       = <tg_user_id>
+```
+
+`updated_tools` is a JSON-encoded string (not nested JSON). Each entry in the list
+maps a `tool_call_id` to a `confirmed` boolean (true=approve, false=deny).
+
+The old `/approvals/{id}/resolve` endpoint is the AgentOS dashboard's approval table
+and is NOT part of this flow — do not call it from the adapter.
 
 ---
 

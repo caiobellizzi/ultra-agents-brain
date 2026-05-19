@@ -1,11 +1,9 @@
 """Plain-Python tool callables around ultra_brain modules.
 
-Agno auto-wraps callables with type hints + docstrings into Function objects
-when added to an Agent's `tools=` list. We deliberately do NOT use the `@tool`
-decorator here — Agno 2.6.7 has a bug in `agno.os.utils.format_tools` that
-crashes when re-wrapping `Function` instances during dashboard introspection
-(TypeError: descriptor '__call__' for 'type' objects doesn't apply to a
-'Function' object).
+Medium-risk tools (ingest_to_vault, research_topic) are wrapped with Agno's
+native @tool(requires_confirmation=True) so that runs pause for HITL approval
+and resume via POST /runs/{run_id}/continue. All other tools stay as plain
+Python callables — Agno auto-wraps them when added to Agent.tools.
 """
 
 from __future__ import annotations
@@ -14,11 +12,27 @@ import json
 import os
 from pathlib import Path
 
+from agno.tools import tool
+
 from ultra_brain import express, ingest, lint, monitor, query, research, review
+
+from .safety import assert_safe
 
 VAULT_ROOT = Path(os.environ.get("UAB_VAULT_PATH", "./vault")).expanduser().resolve()
 
 
+# ---------------------------------------------------------------------------
+# Medium-risk tools — require confirmation before execution
+# ---------------------------------------------------------------------------
+
+
+def _ingest_to_vault_impl(source: str) -> str:
+    assert_safe("write note to vault", target=source)
+    result = ingest.ingest_source(source, VAULT_ROOT)
+    return str(getattr(result, "path", result))
+
+
+@tool(requires_confirmation=True)
 def ingest_to_vault(source: str) -> str:
     """Extract content from a URL or local file and file it into the vault.
 
@@ -28,8 +42,34 @@ def ingest_to_vault(source: str) -> str:
     Returns:
         Path to the resulting note (or error message).
     """
-    result = ingest.ingest_source(source, VAULT_ROOT)
-    return str(getattr(result, "path", result))
+    return _ingest_to_vault_impl(source)
+
+
+def _research_topic_impl(topic: str, *, max_workers: int = 3) -> str:
+    assert_safe("file research note to vault", target=topic)
+    subtasks = research.plan_research(topic, max_workers=max_workers)
+    worker_outputs = [research.worker_summary(topic, st.angle, st.sources) for st in subtasks]
+    path = research.aggregate_research(topic, worker_outputs, VAULT_ROOT)
+    return str(path)
+
+
+@tool(requires_confirmation=True)
+def research_topic(topic: str, *, max_workers: int = 3) -> str:
+    """Plan and execute multi-source research on a topic, file results in vault.
+
+    Args:
+        topic: Topic to research.
+        max_workers: Number of parallel research sub-tasks.
+
+    Returns:
+        Path to the aggregated research note.
+    """
+    return _research_topic_impl(topic, max_workers=max_workers)
+
+
+# ---------------------------------------------------------------------------
+# Low-risk tools — plain callables, no confirmation required
+# ---------------------------------------------------------------------------
 
 
 def query_vault(question: str, *, max_hits: int = 5) -> str:
@@ -43,22 +83,6 @@ def query_vault(question: str, *, max_hits: int = 5) -> str:
         Synthesised answer with citations.
     """
     return query.query_vault(question, vault_root=VAULT_ROOT, max_hits=max_hits)
-
-
-def research_topic(topic: str, *, max_workers: int = 3) -> str:
-    """Plan and execute multi-source research on a topic, file results in vault.
-
-    Args:
-        topic: Topic to research.
-        max_workers: Number of parallel research sub-tasks.
-
-    Returns:
-        Path to the aggregated research note.
-    """
-    subtasks = research.plan_research(topic, max_workers=max_workers)
-    worker_outputs = [research.worker_summary(topic, st.angle, st.sources) for st in subtasks]
-    path = research.aggregate_research(topic, worker_outputs, VAULT_ROOT)
-    return str(path)
 
 
 def run_digest() -> str:

@@ -14,6 +14,7 @@ Environment variables (optional):
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from typing import Any
@@ -74,35 +75,65 @@ async def send_message(
     await tg_post(client, "sendMessage", **kwargs)
 
 
+def _format_tool_args(args: dict) -> str:
+    """Return a short human-readable summary of tool args."""
+    if not args:
+        return "(no args)"
+    parts = []
+    for k, v in args.items():
+        v_str = str(v)
+        if len(v_str) > 80:
+            v_str = v_str[:77] + "..."
+        parts.append(f"{k}={v_str}")
+    return ", ".join(parts)
+
+
 async def send_approval_buttons(
     client: httpx.AsyncClient,
     chat_id: int,
-    approval_id: str,
     run_id: str,
     agent_id: str,
-    prompt: str,
+    requirements: list[dict],
 ) -> None:
-    """Render inline approve/deny keyboard for a PAUSED run."""
-    keyboard = {
-        "inline_keyboard": [
-            [
-                {
-                    "text": "Approve",
-                    "callback_data": f"approve:{approval_id}:{run_id}:{agent_id}",
-                },
-                {
-                    "text": "Deny",
-                    "callback_data": f"deny:{approval_id}:{run_id}:{agent_id}",
-                },
-            ]
-        ]
-    }
-    await send_message(
-        client,
-        chat_id,
-        f"Approval required:\n{prompt}\n\nApprove or deny?",
-        reply_markup=keyboard,
-    )
+    """Render inline approve/deny keyboard for each paused tool call.
+
+    Agno PAUSED response includes a `requirements` array. Each entry has a
+    nested `tool_execution` dict with tool_call_id, tool_name, tool_args, and
+    requires_confirmation. We render one approve/deny row per requirement that
+    has requires_confirmation=True.
+    """
+    keyboard_rows = []
+    lines = ["Approval required for the following action(s):"]
+
+    for req in requirements:
+        tool_exec: dict = req.get("tool_execution") or {}
+        if not tool_exec.get("requires_confirmation"):
+            continue
+        tool_call_id: str = tool_exec.get("tool_call_id", "")
+        tool_name: str = tool_exec.get("tool_name", "unknown")
+        tool_args: dict = tool_exec.get("tool_args") or {}
+        args_summary = _format_tool_args(tool_args)
+
+        lines.append(f"\nTool: {tool_name}\nArgs: {args_summary}")
+
+        keyboard_rows.append([
+            {
+                "text": "Approve",
+                "callback_data": f"approve:{run_id}:{agent_id}:{tool_call_id}",
+            },
+            {
+                "text": "Deny",
+                "callback_data": f"deny:{run_id}:{agent_id}:{tool_call_id}",
+            },
+        ])
+
+    if not keyboard_rows:
+        # Paused but nothing to confirm — surface generic message
+        await send_message(client, chat_id, "Run paused — no confirmation requirements found.")
+        return
+
+    keyboard = {"inline_keyboard": keyboard_rows}
+    await send_message(client, chat_id, "\n".join(lines), reply_markup=keyboard)
 
 
 # ---------------------------------------------------------------------------
@@ -167,14 +198,20 @@ async def route_message(
         return
 
     payload = resp.json()
-    status = payload.get("status") or payload.get("run_status", "")
+    log.debug("AgentOS run response: %s", payload)
 
-    if status == "PAUSED":
-        approval_id = payload.get("approval_id", "")
+    # Agno HITL: status is "PAUSED" (uppercase) in the non-stream response.
+    # is_paused is a property and not serialized. requirements contains the
+    # tool executions waiting for confirmation.
+    status = payload.get("status", "")
+    is_paused = status == "PAUSED" or status == "paused" or payload.get("is_paused") is True
+
+    if is_paused:
         run_id = payload.get("run_id", "")
-        prompt = payload.get("approval_prompt", "Agent requires approval to proceed.")
-        log.info("Run %s paused for approval %s", run_id, approval_id)
-        await send_approval_buttons(client, chat_id, approval_id, run_id, agent_id, prompt)
+        # Agno serialises 'requirements' (not 'active_requirements') in to_dict()
+        requirements: list[dict] = payload.get("requirements") or []
+        log.info("Run %s paused — %d requirement(s)", run_id, len(requirements))
+        await send_approval_buttons(client, chat_id, run_id, agent_id, requirements)
     else:
         reply = (
             payload.get("content")
@@ -189,9 +226,13 @@ async def handle_callback(
     client: httpx.AsyncClient,
     query: dict,
 ) -> None:
-    """Handle inline keyboard callback (approve / deny)."""
+    """Handle inline keyboard callback (approve / deny).
+
+    callback_data format: {action}:{run_id}:{agent_id}:{tool_call_id}
+    """
     callback_id: str = query["id"]
     chat_id: int = query["message"]["chat"]["id"]
+    tg_user_id: int = query.get("from", {}).get("id", chat_id)
     data: str = query.get("data", "")
 
     # Acknowledge immediately so the spinner clears
@@ -202,36 +243,34 @@ async def handle_callback(
         log.warning("Unexpected callback_data shape: %s", data)
         return
 
-    action, approval_id, run_id, agent_id = parts
-    approved = action == "approve"
+    action, run_id, agent_id, tool_call_id = parts
+    confirmed = action == "approve"
 
-    # 1. Resolve the approval
-    resolve_url = f"{AGENTOS_BASE_URL}/approvals/{approval_id}/resolve"
-    try:
-        r = await client.post(resolve_url, json={"approved": approved})
-        if r.status_code not in (200, 201):
-            log.warning("Approval resolve returned %s", r.status_code)
-    except httpx.RequestError as exc:
-        log.error("Network error resolving approval: %s", exc)
-        await send_message(client, chat_id, "Network error resolving approval.")
-        return
-
-    if not approved:
-        await send_message(client, chat_id, "Action denied.")
-        return
-
-    # 2. Resume the run
+    # Resume the run via Agno's native /runs/{run_id}/continue endpoint.
+    # updated_tools is a JSON-encoded list so Agno can match by tool_call_id.
+    updated_tools = json.dumps([{"tool_call_id": tool_call_id, "confirmed": confirmed}])
     continue_url = f"{AGENTOS_BASE_URL}/agents/{agent_id}/runs/{run_id}/continue"
+    continue_data = {
+        "updated_tools": updated_tools,
+        "stream": "false",
+        "session_id": f"telegram-{chat_id}",
+        "user_id": str(tg_user_id),
+    }
+
     try:
-        r = await client.post(continue_url, data={"stream": "false"})
+        r = await client.post(continue_url, data=continue_data)
     except httpx.RequestError as exc:
         log.error("Network error resuming run: %s", exc)
         await send_message(client, chat_id, "Network error resuming run.")
         return
 
     if r.status_code not in (200, 201):
-        log.warning("Continue returned %s", r.status_code)
+        log.warning("Continue returned %s: %s", r.status_code, r.text[:200])
         await send_message(client, chat_id, f"AgentOS error resuming run: {r.status_code}")
+        return
+
+    if not confirmed:
+        await send_message(client, chat_id, "Action denied.")
         return
 
     payload = r.json()

@@ -6,10 +6,7 @@ from agno.agent import Agent
 
 from agentos.db import db
 from agentos.model import chat_model
-from agentos.tools.trust_gate import trust_gate
-from agentos.tools.vault import research_topic as _raw_research
-
-research_topic = trust_gate("file research note to vault")(_raw_research)
+from agentos.tools.vault import research_topic
 
 research_agent = Agent(
     name="research",
@@ -20,7 +17,7 @@ research_agent = Agent(
     instructions=[
         "Use research_topic(topic) for any research request.",
         "Return the resulting note path and a 3-line summary.",
-        "Respect the trust gate — if approval is required, surface the prompt and stop.",
+        "If approval is required, Agno will pause the run automatically — do not surface it manually.",
     ],
     add_history_to_context=True,
 )
