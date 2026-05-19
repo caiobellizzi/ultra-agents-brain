@@ -1,0 +1,10 @@
+[Unit]
+Description=ultra-agents-brain weekly review timer
+Requires=uab-brain.service
+
+[Timer]
+OnCalendar=Sun *-*-* 18:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

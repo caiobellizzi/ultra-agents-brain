@@ -1,0 +1,13 @@
+[Unit]
+Description=ultra-agents-brain daily digest run
+After=uab-brain.service
+Requires=uab-brain.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -sf -X POST http://127.0.0.1:7000/agents/curator/runs \
+  -F "message=digest" \
+  -F "stream=false"
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uab-digest

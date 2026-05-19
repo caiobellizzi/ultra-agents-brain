@@ -1,0 +1,22 @@
+[Unit]
+Description=ultra-agents-brain AgentOS (Agno/FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ultra-agents-brain
+EnvironmentFile=/opt/ultra-agents-brain/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/ultra-agents-brain
+Environment=AGENTOS_HOST=127.0.0.1
+Environment=AGENTOS_PORT=7000
+ExecStart=/usr/bin/python3 -m agentos
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uab-brain
+
+[Install]
+WantedBy=multi-user.target

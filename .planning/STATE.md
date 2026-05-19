@@ -3,13 +3,13 @@
 **Updated:** 2026-05-19
 **Milestone:** v1.0
 **Current phase:** 01-ultra-brain-agno
-**Status:** wave_3_built_pending_smoke
+**Status:** wave_4_complete_deployed
 
 ## Position
 
 - **Phase 01** (`ultra-brain-agno`): in_progress, 1 plan, 0 summaries
 - **Plan 01-01** (`Build ultra-brain on Agno`): pending execution
-- **Next action:** User runs `channels/SMOKE.md` steps; then `/gsd:execute-phase 1 --wave 4`
+- **Next action:** Run end-to-end verification per PLAN.md `## Verification` table (Telegram round-trip, vault ingest, HITL approve, timer scheduling)
 
 ## Decisions
 
@@ -35,6 +35,8 @@
 | `/srv/second-brain` may be near-empty at first | Expected — curator will have little to digest for first few days |
 
 ## History
+
+- 2026-05-19 15:05 UTC: **Wave 4 complete — deployed to VPS** (`root@31.97.130.253:/opt/ultra-agents-brain/`). 8 systemd units installed (`uab-brain`, `uab-telegram`, 3×service+timer for digest/review/monitor). Both services `active (running)`. Health: `{"status":"ok"}`. Timers scheduled: monitor every 4h, digest 20:00 daily, review Sun 18:00. Old `deploy/hermes/` deleted. `ultra-agents-brain.service` removed.
 
 - 2026-05-19 11:40: **Wave 3 HITL smoke green** — Telegram `/ingest https://anthropic.com` -> Approve button -> vault note written at `02-Resources/articles/`. Adapter fix (commit a244fd4): keep `requires_confirmation=True` and echo full ToolExecution dict on /continue; Agno only executes when both flags are True.
 
