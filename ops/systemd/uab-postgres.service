@@ -1,0 +1,13 @@
+[Unit]
+Description=Postgres 16 + pgvector for ultra-agents-brain
+After=network.target
+
+[Service]
+Type=forking
+User=postgres
+ExecStart=/usr/lib/postgresql/16/bin/pg_ctl start -D /var/lib/postgresql/16/main -l /var/log/postgresql/uab-postgres.log
+ExecStop=/usr/lib/postgresql/16/bin/pg_ctl stop -D /var/lib/postgresql/16/main
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
