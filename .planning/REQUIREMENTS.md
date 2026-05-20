@@ -43,7 +43,7 @@
 | REQ-201 | Old `ultra-agents-brain.service` disabled and removed from VPS | 1 |
 | REQ-202 | `ultra_brain/llm.py` deleted after Agno migration verified end-to-end | 1 |
 | REQ-203 | Plan source `plans/swift-sniffing-meerkat.md` marked as superseded (not deleted) | 1 |
-| REQ-204 | Bot token rotated via BotFather `/revoke` after Wave 4 verification passes | 1 |
+| REQ-204 | Bot token rotated via BotFather `/revoke` after Wave 4 verification passes | 1 | **DEFERRED — manual BotFather action, not automatable** |
 
 ## Out of Scope (deferred to v2.0+)
 

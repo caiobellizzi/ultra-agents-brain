@@ -19,6 +19,7 @@ from agentos.agents.query import query_agent
 from agentos.agents.research import research_agent
 from agentos.db import db
 from agentos.knowledge import kb
+import agentos.cost  # noqa: F401 — registers litellm success_callback for cost ledger
 
 agent_os = AgentOS(
     name="ultra-brain",

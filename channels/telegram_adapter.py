@@ -8,7 +8,7 @@ Environment variables (required):
     TELEGRAM_ALLOWED_CHAT_IDS   — comma-separated integer chat IDs
 
 Environment variables (optional):
-    AGENTOS_BASE_URL            — default http://127.0.0.1:7001
+    AGENTOS_BASE_URL            — default http://127.0.0.1:7000
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ if not ALLOWED_CHAT_IDS and not _open_to_all:
         "Set TELEGRAM_ALLOWED_CHAT_IDS=<chat_id,...> or TELEGRAM_OPEN_TO_ALL=1."
     )
 
-AGENTOS_BASE_URL: str = os.getenv("AGENTOS_BASE_URL", "http://127.0.0.1:7001")
+AGENTOS_BASE_URL: str = os.getenv("AGENTOS_BASE_URL", "http://127.0.0.1:7000")
 TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 POLL_TIMEOUT = 30  # seconds for long-poll
 

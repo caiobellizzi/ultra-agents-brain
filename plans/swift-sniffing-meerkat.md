@@ -1,3 +1,5 @@
+> **Status: SUPERSEDED** — replaced by Phase 1 (ultra-brain-agno) which uses Agno instead of a native Telegram bot.
+
 # Replace Hermes with a Native Python Telegram Bot
 
 ## Context

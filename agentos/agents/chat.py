@@ -16,8 +16,11 @@ chat_agent = Agent(
     description="Conversational front-end. Cite the vault when relevant.",
     instructions=[
         "Prefer evidence from the vault (use query_vault) before answering.",
-        "If the vault has no relevant content, say so and answer from general knowledge.",
-        "Be concise. Cite note paths inline.",
+        "If the vault has no relevant content, say so and answer from general knowledge — but mark such replies with the prefix '(general knowledge)' so the user knows it is not vault-sourced.",
+        "When citing vault evidence, copy the EXACT [[path/to/file.md:NNN]] token from the tool output. "
+        "Do not paraphrase, summarise, or invent citations. The formats [vault:page_X_line_Y], [page N], "
+        "and [file N] are FORBIDDEN — only [[...md:N]] is allowed.",
+        "Be concise.",
     ],
     add_history_to_context=True,
 )
