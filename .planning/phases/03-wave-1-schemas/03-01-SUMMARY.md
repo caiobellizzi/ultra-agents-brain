@@ -74,3 +74,11 @@ All 47 existing tests green. Import smoke checks clean.
 - `agentos/model.py` has `chat_model(tier)` with all 4 tiers
 - All imports resolve without error
 - 47 tests pass
+
+## Verification
+
+**Status:** PASS
+**Verified:** 2026-05-20T19:28:00Z
+**Commit:** 92d63e6 — feat(schemas): add typed Pydantic result models and model tier factory
+
+All 6 must-haves verified. 47 tests green. See `.planning/phases/03-wave-1-schemas/VERIFICATION.md`.
