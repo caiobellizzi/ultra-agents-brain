@@ -104,6 +104,45 @@ def _format_tool_args(args: dict) -> str:
     return ", ".join(parts)
 
 
+def extract_reply_text(agent_response: dict) -> str:
+    """Extract human-readable text from typed agent response."""
+    output = agent_response.get("output", {})
+
+    if isinstance(output, dict):
+        # ChatReply / QueryAnswer
+        if "text" in output:
+            return output["text"]
+        if "answer" in output:
+            return output["answer"]
+        # ResearchReport
+        if "findings" in output:
+            findings = output["findings"]
+            text = "\n".join(f"• {f['summary']}" for f in findings[:5])
+            if output.get("next_questions"):
+                text += "\n\nNext questions:\n" + "\n".join(
+                    f"• {q}" for q in output["next_questions"][:3]
+                )
+            return text
+        # CuratorResult / IngestResult — not user-facing in Telegram
+        if "actions_taken" in output:
+            return f"Done: {', '.join(output['actions_taken'][:3])}"
+        if "note_path" in output:
+            return f"Ingested → {output['note_path']}"
+
+    # Fallback: stringify whatever we got
+    return str(output)
+
+
+def format_citations(citations: list[dict]) -> str:
+    if not citations:
+        return ""
+    lines = ["_Sources:_"]
+    for c in citations[:3]:
+        title = c.get("title", c.get("path", ""))
+        lines.append(f"• {title}")
+    return "\n\n" + "\n".join(lines)
+
+
 async def send_approval_buttons(
     client: httpx.AsyncClient,
     chat_id: int,
@@ -169,7 +208,7 @@ def _agent_id_for(text: str) -> str:
         return "query"
     if lower.startswith("/research "):
         return "research"
-    return "chat"
+    return "supervisor"
 
 
 def _message_body(text: str, agent_id: str) -> str:
@@ -196,7 +235,10 @@ async def route_message(
     body = _message_body(text, agent_id)
     session_id = f"telegram-{chat_id}"
 
-    url = f"{AGENTOS_BASE_URL}/agents/{agent_id}/runs"
+    if agent_id == "supervisor":
+        url = f"{AGENTOS_BASE_URL}/teams/{agent_id}/runs"
+    else:
+        url = f"{AGENTOS_BASE_URL}/agents/{agent_id}/runs"
     data = {
         "message": body,
         "session_id": session_id,
@@ -232,12 +274,12 @@ async def route_message(
         log.info("Run %s paused — %d requirement(s)", run_id, len(requirements))
         await send_approval_buttons(client, chat_id, run_id, agent_id, requirements)
     else:
-        reply = (
-            payload.get("content")
-            or payload.get("message")
-            or payload.get("output")
-            or str(payload)
-        )
+        reply = extract_reply_text(payload)
+        output = payload.get("output", {})
+        if isinstance(output, dict):
+            citations = output.get("citations", [])
+            if citations:
+                reply += format_citations(citations)
         await send_message(client, chat_id, reply)
 
 
@@ -264,7 +306,7 @@ async def handle_callback(
 
     action, run_id, agent_id, tool_call_id = parts
 
-    _VALID_AGENTS = {"chat", "ingest", "query", "research", "curator"}
+    _VALID_AGENTS = {"chat", "ingest", "query", "research", "curator", "supervisor"}
     _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
     if agent_id not in _VALID_AGENTS:
         log.warning("callback_data contains unknown agent_id %r — ignoring", agent_id)
@@ -301,7 +343,10 @@ async def handle_callback(
             "requires_confirmation": True,
         }]
     tools_payload = json.dumps(tools_list)
-    continue_url = f"{AGENTOS_BASE_URL}/agents/{agent_id}/runs/{run_id}/continue"
+    if agent_id == "supervisor":
+        continue_url = f"{AGENTOS_BASE_URL}/teams/{agent_id}/runs/{run_id}/continue"
+    else:
+        continue_url = f"{AGENTOS_BASE_URL}/agents/{agent_id}/runs/{run_id}/continue"
     continue_data = {
         "tools": tools_payload,
         "stream": "false",
@@ -328,12 +373,7 @@ async def handle_callback(
         return
 
     payload = r.json()
-    reply = (
-        payload.get("content")
-        or payload.get("message")
-        or payload.get("output")
-        or str(payload)
-    )
+    reply = extract_reply_text(payload)
     await send_message(client, chat_id, reply)
 
 
