@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from typing import Any
 
 import httpx
@@ -49,6 +50,13 @@ ALLOWED_CHAT_IDS: set[int] = (
     if _raw_ids.strip()
     else set()
 )
+_open_to_all = os.getenv("TELEGRAM_OPEN_TO_ALL", "").lower() in ("1", "true", "yes")
+if not ALLOWED_CHAT_IDS and not _open_to_all:
+    raise RuntimeError(
+        "TELEGRAM_ALLOWED_CHAT_IDS is empty and TELEGRAM_OPEN_TO_ALL is not set. "
+        "Set TELEGRAM_ALLOWED_CHAT_IDS=<chat_id,...> or TELEGRAM_OPEN_TO_ALL=1."
+    )
+
 AGENTOS_BASE_URL: str = os.getenv("AGENTOS_BASE_URL", "http://127.0.0.1:7001")
 TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 POLL_TIMEOUT = 30  # seconds for long-poll
@@ -255,6 +263,16 @@ async def handle_callback(
         return
 
     action, run_id, agent_id, tool_call_id = parts
+
+    _VALID_AGENTS = {"chat", "ingest", "query", "research", "curator"}
+    _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+    if agent_id not in _VALID_AGENTS:
+        log.warning("callback_data contains unknown agent_id %r — ignoring", agent_id)
+        return
+    if not _UUID_RE.match(run_id):
+        log.warning("callback_data contains invalid run_id %r — ignoring", run_id)
+        return
+
     if run_id in _RESOLVED_RUNS:
         log.debug("Ignoring duplicate callback for already-resolved run %s", run_id)
         return

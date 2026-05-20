@@ -7,7 +7,7 @@ import os
 from agno.models.openai import OpenAIChat
 
 LITELLM_BASE_URL = os.environ.get("LITELLM_BASE_URL", "http://127.0.0.1:4000/v1")
-LITELLM_API_KEY = os.environ.get("LITELLM_MASTER_KEY", "sk-dev-local")
+LITELLM_API_KEY = os.environ["LITELLM_MASTER_KEY"]
 
 
 def chat_model(tier: str = "cheap-worker") -> OpenAIChat:

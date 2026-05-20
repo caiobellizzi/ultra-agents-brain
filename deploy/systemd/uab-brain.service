@@ -17,6 +17,11 @@ RestartSec=5
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=uab-brain
+User=uabrain
+Group=uabrain
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=/srv/second-brain /var/log/ultra-agents-brain /var/lib/uab
 
 [Install]
 WantedBy=multi-user.target
