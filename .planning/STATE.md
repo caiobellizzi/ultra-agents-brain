@@ -1,15 +1,16 @@
 # STATE — ultra-agents-brain
 
-**Updated:** 2026-05-19
-**Milestone:** v1.0 — COMPLETE
-**Status:** shipped
+**Updated:** 2026-05-20
+**Milestone:** v1.5 — Agno Full Reconfiguration
+**Status:** in-progress
+**Current phase:** 2 (wave-0-infra)
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Always-on personal knowledge layer — vault RAG + autonomous routines + HITL
-**Current focus:** Production observation (2–4 weeks) before v2.0 planning
+**Current focus:** v1.5 — Agno full reconfiguration sweep (Phases 2–7)
 
 ## Shipped
 
@@ -29,3 +30,15 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 | Wrap ultra_brain/*.py, don't rewrite | ✓ Zero regressions |
 | Single-phase 4-wave roadmap | ✓ Right granularity for 1-day build |
 | Defer ultra-workshop | — Pending 2–4 weeks production observation |
+
+## v1.5 Decisions (locked from grill-me 2026-05-20)
+
+| Decision | Outcome |
+|----------|---------|
+| Full reconfiguration sweep (all agents) | ✓ Not incremental — every agent gets full feature set |
+| Postgres + pgvector (not Qdrant/Chroma) | ✓ Single DB for sessions + knowledge + evals |
+| SentenceTransformerEmbedder all-MiniLM-L6-v2 | ✓ Local, offline, no API cost |
+| MCP + A2A via Agno (no custom FastAPI routes) | ✓ Standard protocols discoverable by workshop |
+| enable_mcp_server=True on BOTH AgentOS() AND get_app() | ✓ Gotcha from docs-research |
+| Eval pre-commit routing (not CI/systemd) | ✓ ≤15s single-agent, ≤90s full suite |
+| EVAL_JUDGE_TIER env-var (default private-worker) | ✓ Free offline judge, override for releases |
