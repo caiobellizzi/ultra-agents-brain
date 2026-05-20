@@ -1,9 +1,24 @@
+---
+gsd_state_version: 1.0
+milestone: v1.5
+milestone_name: — Agno Full Reconfiguration
+current_phase: 3 (wave-1-schemas)
+status: in-progress
+last_updated: "2026-05-20T19:10:00.000Z"
+progress:
+  total_phases: 7
+  completed_phases: 2
+  total_plans: 13
+  completed_plans: 3
+  percent: 23
+---
+
 # STATE — ultra-agents-brain
 
 **Updated:** 2026-05-20
 **Milestone:** v1.5 — Agno Full Reconfiguration
 **Status:** in-progress
-**Current phase:** 2 (wave-0-infra)
+**Current phase:** 3 (wave-1-schemas)
 
 ## Project Reference
 
