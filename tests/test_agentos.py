@@ -145,6 +145,37 @@ class TestAgentsImportable(unittest.TestCase):
 
         self.assertIsNotNone(research_agent)
 
+    def test_research_agent_make_has_orchestrator_model_and_schema(self) -> None:
+        from unittest.mock import MagicMock
+
+        from agno.tools.reasoning import ReasoningTools
+
+        from agentos.agents.research import make_research_agent
+        from agentos.schemas import ResearchReport
+
+        mock_mm = MagicMock()
+        mock_knowledge = MagicMock()
+        agent = make_research_agent(memory_manager=mock_mm, knowledge=mock_knowledge)
+
+        # Orchestrator model tier
+        self.assertIn("orchestrator", str(agent.model))
+
+        # ReasoningTools present
+        tool_types = [type(t).__name__ for t in (agent.tools or [])]
+        self.assertIn("ReasoningTools", tool_types)
+
+        # ResearchReport output schema
+        self.assertEqual(agent.output_schema, ResearchReport)
+
+        # Memory wired
+        self.assertEqual(agent.memory_manager, mock_mm)
+        self.assertTrue(agent.enable_agentic_memory)
+        self.assertTrue(agent.update_memory_on_run)
+
+        # Knowledge wired
+        self.assertEqual(agent.knowledge, mock_knowledge)
+        self.assertTrue(agent.search_knowledge)
+
     def test_curator_agent_importable(self) -> None:
         from agentos.agents.curator import curator_agent
 
