@@ -123,7 +123,7 @@ class TestTrustGateDecorator(unittest.TestCase):
 
 
 class TestAgentsImportable(unittest.TestCase):
-    """W2.5 — all 5 agent files importable without error."""
+    """W2.5 — all agent files importable without error, including supervisor."""
 
     def test_chat_agent_importable(self) -> None:
         from agentos.agents.chat import chat_agent
@@ -150,15 +150,40 @@ class TestAgentsImportable(unittest.TestCase):
 
         self.assertIsNotNone(curator_agent)
 
+    def test_curator_agent_has_memory_and_output_schema(self) -> None:
+        from agentos.agents.curator import make_curator_agent
+        from agentos.schemas import CuratorResult
+        from unittest.mock import MagicMock
+
+        mock_mm = MagicMock()
+        agent = make_curator_agent(memory_manager=mock_mm)
+        self.assertEqual(agent.memory_manager, mock_mm)
+        self.assertTrue(agent.enable_agentic_memory)
+        self.assertTrue(agent.update_memory_on_run)
+        self.assertTrue(agent.add_history_to_context)
+        self.assertEqual(agent.output_schema, CuratorResult)
+        # No session summaries
+        self.assertFalse(getattr(agent, "enable_session_summaries", False))
+        # No knowledge
+        self.assertIsNone(getattr(agent, "knowledge", None))
+
+    def test_supervisor_agent_importable(self) -> None:
+        from agentos.agents.supervisor import supervisor_agent
+
+        self.assertIsNotNone(supervisor_agent)
+        self.assertIsNotNone(supervisor_agent.members)
+        self.assertTrue(len(supervisor_agent.members) > 0)
+
     def test_all_agents_have_expected_names(self) -> None:
         from agentos.agents.chat import chat_agent
         from agentos.agents.curator import curator_agent
         from agentos.agents.ingest import ingest_agent
         from agentos.agents.query import query_agent
         from agentos.agents.research import research_agent
+        from agentos.agents.supervisor import supervisor_agent
 
-        names = {a.name for a in [chat_agent, ingest_agent, query_agent, research_agent, curator_agent]}
-        self.assertEqual(names, {"chat", "ingest", "query", "research", "curator"})
+        names = {a.name for a in [chat_agent, ingest_agent, query_agent, research_agent, curator_agent, supervisor_agent]}
+        self.assertEqual(names, {"chat", "ingest", "query", "research", "curator", "supervisor"})
 
 
 class TestAppHealth(unittest.TestCase):
