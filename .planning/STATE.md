@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
-current_phase: 4 (wave-2-agents)
+current_phase: 5 (wave-3-wiring)
 status: in-progress
-last_updated: "2026-05-20T19:29:00.000Z"
+last_updated: "2026-05-20T22:53:36.572Z"
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 5
   total_plans: 13
-  completed_plans: 4
-  percent: 31
+  completed_plans: 9
+  percent: 69
 ---
 
 # STATE — ultra-agents-brain
@@ -18,7 +18,7 @@ progress:
 **Updated:** 2026-05-20
 **Milestone:** v1.5 — Agno Full Reconfiguration
 **Status:** in-progress
-**Current phase:** 3 (wave-1-schemas)
+**Current phase:** 5 (wave-3-wiring)
 
 ## Project Reference
 
@@ -30,6 +30,10 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 ## Shipped
 
 - v1.0 (2026-05-19): AgentOS on Agno, Telegram adapter, 5 systemd units on VPS. 1 phase, 1 plan, 38 tests green.
+- Phase 02 (wave-0-infra): DB wiring, model factory, Agno bootstrap — COMPLETE
+- Phase 03 (wave-1-schemas): Typed result schemas + model factory — COMPLETE, verified 2026-05-20
+- Phase 04 (wave-2-agents): All 5 agents reconfigured (memory, session, RAG, typed output) + PgVector knowledge layer — COMPLETE, verified 2026-05-20, 49 tests green
+- Phase 05 (wave-3-wiring): PostgresDb, shared MemoryManager, MCP + A2A wired into AgentOS — COMPLETE, 54 tests green
 
 ## Deferred to v2.0+
 
@@ -54,6 +58,8 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 | Postgres + pgvector (not Qdrant/Chroma) | ✓ Single DB for sessions + knowledge + evals |
 | SentenceTransformerEmbedder all-MiniLM-L6-v2 | ✓ Local, offline, no API cost |
 | MCP + A2A via Agno (no custom FastAPI routes) | ✓ Standard protocols discoverable by workshop |
-| enable_mcp_server=True on BOTH AgentOS() AND get_app() | ✓ Gotcha from docs-research |
+| enable_mcp_server=True on AgentOS() only (get_app() reads it — no kwarg needed) | ✓ Actual Agno 2.6.7 API differs from docs |
+| a2a-sdk pinned <1.0 (v1.0.3 broke SendMessageSuccessResponse import) | ✓ Fixed for agno 2.6.7 compatibility |
+| PostgresDb with SqliteDb fallback when POSTGRES_DSN_SESSIONS absent | ✓ Dev/test environments need no Postgres |
 | Eval pre-commit routing (not CI/systemd) | ✓ ≤15s single-agent, ≤90s full suite |
 | EVAL_JUDGE_TIER env-var (default private-worker) | ✓ Free offline judge, override for releases |
