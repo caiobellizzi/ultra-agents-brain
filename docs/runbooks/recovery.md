@@ -20,7 +20,7 @@ sudo tailscale up
 5. Restart the stack:
 
 ```bash
-sudo systemctl restart ultra-agents-brain.service
+sudo systemctl restart uab-brain.service
 ```
 
 6. Run:
@@ -34,11 +34,11 @@ sudo systemctl restart ultra-agents-brain.service
 If `/srv/second-brain` is missing or corrupt:
 
 ```bash
-sudo systemctl stop ultra-agents-brain.service
+sudo systemctl stop uab-brain.service
 sudo mv /srv/second-brain /srv/second-brain.broken.$(date -u +%Y%m%dT%H%M%SZ)
 sudo git clone <private-vault-github-url> /srv/second-brain
 sudo chown -R uabrain:uabrain /srv/second-brain
-sudo systemctl start ultra-agents-brain.service
+sudo systemctl start uab-brain.service
 ```
 
 Then run:
@@ -54,7 +54,7 @@ Hermes state lives under `/var/lib/ultra-agents-brain/hermes`. If restoring from
 ```bash
 sudo mkdir -p /var/lib/ultra-agents-brain/hermes
 sudo chown -R uabrain:uabrain /var/lib/ultra-agents-brain/hermes
-sudo systemctl restart ultra-agents-brain.service
+sudo systemctl restart uab-brain.service
 ```
 
 The second brain remains the source of durable knowledge. SQLite session loss should not delete vault content.
@@ -76,7 +76,7 @@ The second brain remains the source of durable knowledge. SQLite session loss sh
 5. Restart services:
 
 ```bash
-sudo systemctl restart ultra-agents-brain.service
+sudo systemctl restart uab-brain.service
 ```
 
 6. Validate:
@@ -105,7 +105,7 @@ Current pinned tag: `ghcr.io/nousresearch/hermes-agent:v2026.5.16`.
 ```bash
 cd /opt/ultra-agents-brain/deploy
 docker compose pull hermes
-sudo systemctl restart ultra-agents-brain.service
+sudo systemctl restart uab-brain.service
 ```
 
 4. Validate:

@@ -58,10 +58,10 @@ Keep `.env` out of source control.
 Install the systemd unit and cron file:
 
 ```bash
-sudo cp /opt/ultra-agents-brain/deploy/systemd/ultra-agents-brain.service /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-brain.service /etc/systemd/system/
 sudo cp /opt/ultra-agents-brain/deploy/cron/ultra-agents-brain.cron /etc/cron.d/ultra-agents-brain
 sudo systemctl daemon-reload
-sudo systemctl enable --now ultra-agents-brain.service
+sudo systemctl enable --now uab-brain.service
 ```
 
 Check service state:
