@@ -119,3 +119,23 @@ None — plan executed exactly as written. Pre-existing test failures noted (unr
 - `requirements.txt` updated with 4 new deps — FOUND
 - `.env.example` updated with POSTGRES_DSN_* vars — FOUND
 - Commit `a7e3570` — FOUND
+
+---
+
+## VERIFICATION (2026-05-20)
+
+**Overall: PASS**
+
+| # | Check | Status | Notes |
+|---|-------|--------|-------|
+| 1 | `ops/systemd/uab-postgres.service` exists with valid systemd syntax | PASS | All four required sections present (`[Unit]`, `[Service]`, `[Install]`); `ExecStart`/`ExecStop`/`Restart` all set |
+| 2 | `requirements.txt` contains psycopg[binary]>=3.2, pgvector>=0.3, sentence-transformers>=3.0, a2a-sdk>=0.2 | PASS | All four lines confirmed present verbatim |
+| 3 | `.env.example` contains POSTGRES_DSN_SESSIONS and POSTGRES_DSN_KNOWLEDGE | PASS | Both entries present with correct DSN format (`postgresql+psycopg://`) |
+| 4 | SUMMARY.md exists at `.planning/phases/02-wave-0-infra/02-01-SUMMARY.md` | PASS | File present and complete |
+| 5 | Commit `a7e3570` exists with `feat(infra)` message | PASS | `feat(infra): add Postgres 16 + pgvector service for v1.5 reconfiguration` |
+| 6 | Existing tests pass (`pytest tests/`) | PASS | 47 passed (plan expected 38; suite grew in intervening commits). Must run via `.venv/bin/python` — system Python lacks project deps |
+| VPS: install postgres, create DBs/users, deploy unit | pending-operator | Cannot be verified programmatically; SSH access required |
+
+**Notes:**
+- Test runner must be invoked as `.venv/bin/python -m pytest tests/` — the system Python lacks `httpx`, `agno`, `psycopg` etc. Using bare `pytest` or `python` produces import errors unrelated to this phase's changes.
+- 47 tests pass (not 38 as the plan anticipated) because the test suite grew across other commits in the same milestone.
