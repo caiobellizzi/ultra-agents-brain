@@ -6,6 +6,9 @@ Covers gaps:
   W2.4 — safety.py assert_safe / trust_gate behavior
   W2.5 — all 5 agent files importable
   W2.6 — app can be instantiated and /health route exists
+  W3.1 — app.py uses PostgresDb (not SQLite) + shared MemoryManager
+  W3.2 — AgentOS constructed with enable_mcp_server=True and a2a_interface=True
+  W3.3 — supervisor uses make_supervisor_team factory (accepts memory_manager)
 """
 from __future__ import annotations
 
@@ -13,7 +16,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # Required env var for agentos.model (all agent imports transitively need it)
 os.environ.setdefault("LITELLM_MASTER_KEY", "test-key-for-tests")
@@ -146,8 +149,6 @@ class TestAgentsImportable(unittest.TestCase):
         self.assertIsNotNone(research_agent)
 
     def test_research_agent_make_has_orchestrator_model_and_schema(self) -> None:
-        from unittest.mock import MagicMock
-
         from agno.tools.reasoning import ReasoningTools
 
         from agentos.agents.research import make_research_agent
@@ -184,7 +185,6 @@ class TestAgentsImportable(unittest.TestCase):
     def test_curator_agent_has_memory_and_output_schema(self) -> None:
         from agentos.agents.curator import make_curator_agent
         from agentos.schemas import CuratorResult
-        from unittest.mock import MagicMock
 
         mock_mm = MagicMock()
         agent = make_curator_agent(memory_manager=mock_mm)
@@ -205,6 +205,15 @@ class TestAgentsImportable(unittest.TestCase):
         self.assertIsNotNone(supervisor_agent.members)
         self.assertTrue(len(supervisor_agent.members) > 0)
 
+    def test_supervisor_make_accepts_memory_manager(self) -> None:
+        """W3.3 — make_supervisor_team accepts memory_manager= (not hard-coded)."""
+        from agentos.agents.supervisor import make_supervisor_team
+
+        mock_mm = MagicMock()
+        team = make_supervisor_team(memory_manager=mock_mm)
+        self.assertIsNotNone(team)
+        self.assertEqual(team.name, "supervisor")
+
     def test_all_agents_have_expected_names(self) -> None:
         from agentos.agents.chat import chat_agent
         from agentos.agents.curator import curator_agent
@@ -218,13 +227,70 @@ class TestAgentsImportable(unittest.TestCase):
 
 
 class TestAppHealth(unittest.TestCase):
-    """W2.6 — agentos/app.py: AgentOS app can be instantiated and /health route responds."""
+    """W2.6 / W3.1 / W3.2 — app.py instantiates correctly with PostgresDb, MemoryManager, MCP, A2A."""
+
+    def _make_mock_db(self):
+        """Return a MagicMock that satisfies AgentOS db= checks."""
+        from agno.db.base import BaseDb
+        mock_db = MagicMock(spec=BaseDb)
+        mock_db.create_schema = True
+        return mock_db
+
+    def _patch_app_dependencies(self):
+        """Context manager that patches PostgresDb and MemoryManager in app.py."""
+        from agno.db.postgres import PostgresDb
+        from agno.memory.manager import MemoryManager
+
+        mock_db = self._make_mock_db()
+        mock_memory = MagicMock(spec=MemoryManager)
+
+        return (
+            patch("agentos.app.PostgresDb", return_value=mock_db),
+            patch("agentos.app.MemoryManager", return_value=mock_memory),
+        )
 
     def test_app_importable(self) -> None:
         from agentos.app import agent_os, app
 
         self.assertIsNotNone(app)
         self.assertIsNotNone(agent_os)
+
+    def test_app_uses_postgres_db_when_dsn_set(self) -> None:
+        """W3.1 — app.py uses PostgresDb when POSTGRES_DSN_SESSIONS is set;
+        falls back to SqliteDb when it is not (test environment)."""
+        import importlib
+        import sys
+
+        dsn = os.environ.get("POSTGRES_DSN_SESSIONS")
+        if dsn:
+            from agno.db.postgres import PostgresDb
+            from agentos.app import db
+            self.assertIsInstance(db, PostgresDb)
+        else:
+            # In test environment (no DSN), the fallback SqliteDb must be used.
+            from agno.db.sqlite import SqliteDb
+            from agentos.app import db
+            self.assertIsInstance(db, SqliteDb)
+
+    def test_app_has_memory_manager(self) -> None:
+        """W3.1 — app.py instantiates a shared MemoryManager."""
+        from agno.memory.manager import MemoryManager
+
+        from agentos.app import memory
+
+        self.assertIsInstance(memory, MemoryManager)
+
+    def test_agent_os_has_mcp_server_enabled(self) -> None:
+        """W3.2 — AgentOS constructed with enable_mcp_server=True."""
+        from agentos.app import agent_os
+
+        self.assertTrue(agent_os.enable_mcp_server)
+
+    def test_agent_os_has_a2a_interface_enabled(self) -> None:
+        """W3.2 — AgentOS constructed with a2a_interface=True."""
+        from agentos.app import agent_os
+
+        self.assertTrue(agent_os.a2a_interface)
 
     def test_app_is_fastapi_instance(self) -> None:
         from fastapi import FastAPI

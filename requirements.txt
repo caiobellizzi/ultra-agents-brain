@@ -14,4 +14,5 @@ openinference-instrumentation-agno
 psycopg[binary]>=3.2
 pgvector>=0.3
 sentence-transformers>=3.0
-a2a-sdk>=0.2
+a2a-sdk>=0.2,<1.0
+fastmcp>=2.0

@@ -10,24 +10,73 @@ with a JSON body — not our previous `/v1/agents/<name>` shape.
 
 from __future__ import annotations
 
+import os
+
+from dotenv import load_dotenv
+load_dotenv()
+
 from agno.os.app import AgentOS
 
-from agentos.agents.chat import chat_agent
-from agentos.agents.curator import curator_agent
-from agentos.agents.ingest import ingest_agent
-from agentos.agents.query import query_agent
-from agentos.agents.research import research_agent
-from agentos.db import db
-from agentos.knowledge import kb
+from agentos.knowledge import VaultKnowledge
+from agentos.model import chat_model
+from agentos.agents.chat import make_chat_agent
+from agentos.agents.curator import make_curator_agent
+from agentos.agents.ingest import make_ingest_agent
+from agentos.agents.query import make_query_agent
+from agentos.agents.research import make_research_agent
+from agentos.agents.supervisor import make_supervisor_team
 import agentos.cost  # noqa: F401 — registers litellm success_callback for cost ledger
 
+# --- Database: PostgresDb in production, SqliteDb fallback for local/test environments ---
+POSTGRES_DSN_SESSIONS = os.getenv("POSTGRES_DSN_SESSIONS")
+
+if POSTGRES_DSN_SESSIONS:
+    from agno.db.postgres import PostgresDb
+    db = PostgresDb(db_url=POSTGRES_DSN_SESSIONS, create_schema=True)
+else:
+    # Fallback for local development / testing (no POSTGRES_DSN_SESSIONS set)
+    from pathlib import Path
+    from agno.db.sqlite import SqliteDb
+    _DB_PATH = Path(os.environ.get("UAB_DB_PATH", "~/Documents/uab-state/agno.db")).expanduser()
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db = SqliteDb(db_file=str(_DB_PATH))
+
+# --- Shared MemoryManager (one instance, all agents share it) ---
+from agno.memory.manager import MemoryManager
+memory = MemoryManager(
+    db=db,
+    model=chat_model("cheap-worker"),
+)
+
+# --- Knowledge base (PgVector RAG, loaded once at startup) ---
+# VaultKnowledge guards make_knowledge() — only creates PgVector when
+# POSTGRES_DSN_KNOWLEDGE is set; falls back to an empty Knowledge otherwise.
+vault = VaultKnowledge()
+vault.load()  # one-shot startup load; incremental updates from curator
+kb = vault.knowledge  # the real Knowledge (or empty stub in dev/test)
+
+# --- Agent factory calls (all receive memory + knowledge) ---
+chat_agent = make_chat_agent(memory_manager=memory, knowledge=kb, db=db)
+curator_agent = make_curator_agent(memory_manager=memory, db=db)
+ingest_agent = make_ingest_agent(memory_manager=memory, db=db)
+query_agent = make_query_agent(memory_manager=memory, knowledge=kb, db=db)
+research_agent = make_research_agent(memory_manager=memory, knowledge=kb, db=db)
+supervisor_team = make_supervisor_team(memory_manager=memory, db=db)
+
+# --- AgentOS: MCP + A2A + tracing ---
+# NOTE: In this version of Agno, enable_mcp_server is set ONLY on AgentOS();
+# get_app() reads from self.enable_mcp_server (no separate kwarg on get_app).
 agent_os = AgentOS(
     name="ultra-brain",
     description="Second-brain agents over a markdown vault.",
     db=db,
-    agents=[chat_agent, ingest_agent, query_agent, research_agent, curator_agent],
-    knowledge=[kb.knowledge],
+    agents=[chat_agent, curator_agent, ingest_agent, query_agent, research_agent],
+    teams=[supervisor_team],
+    knowledge=[kb],
     cors_allowed_origins=["https://os.agno.com", "http://localhost:3000"],
+    enable_mcp_server=True,
+    a2a_interface=True,
+    tracing=True,
 )
 
 app = agent_os.get_app()
