@@ -1,17 +1,11 @@
 ---
-id: people-index
+id: people
 type: index
 title: "People Index"
-created_at: 2026-05-18T00:00:00Z
-para_tier: _system
-tags: [system, people]
-status: active
+updated_at: 2026-05-18T00:00:00Z
 privacy: personal
 ---
 
-# People Index
+# People
 
-Global index for people entity pages.
-
-Use aliases in entity frontmatter instead of duplicate pages.
-
+Global entity index for people. Add entries as wikilinks when they appear in 3+ notes.

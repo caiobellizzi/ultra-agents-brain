@@ -43,9 +43,9 @@ class TestRoutingLogic(unittest.TestCase):
     def setUpClass(cls):
         cls.mod = _import_adapter_with_env()
 
-    def test_plain_text_routes_to_chat(self):
+    def test_plain_text_routes_to_supervisor(self):
         agent = self.mod._agent_id_for("Hello, how are you?")
-        self.assertEqual(agent, "chat")
+        self.assertEqual(agent, "supervisor")
 
     def test_ingest_command_routes_to_ingest(self):
         agent = self.mod._agent_id_for("/ingest https://example.com/page")
@@ -59,9 +59,9 @@ class TestRoutingLogic(unittest.TestCase):
         agent = self.mod._agent_id_for("/research AI agent observability")
         self.assertEqual(agent, "research")
 
-    def test_unknown_command_falls_back_to_chat(self):
+    def test_unknown_command_falls_back_to_supervisor(self):
         agent = self.mod._agent_id_for("/unknown something")
-        self.assertEqual(agent, "chat")
+        self.assertEqual(agent, "supervisor")
 
     def test_command_prefix_stripped_from_body(self):
         body = self.mod._message_body("/ingest https://example.com", "ingest")

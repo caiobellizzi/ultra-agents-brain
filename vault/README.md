@@ -1,16 +1,30 @@
-# Ultra Agents Brain Vault
+# Second Brain
 
-This vault is the Markdown second brain for the Telegram-accessible agent system.
-It combines PARA filing with LLM-maintained wiki operations.
+Personal knowledge vault — PARA structure + Karpathy wiki operations.
 
-## PARA Layout
+## Layout
 
-- `00-Projects/`: active work with a clear desired outcome.
-- `01-Areas/`: ongoing responsibilities and interests without an end date.
-- `02-Resources/`: reference material that may support many projects or areas.
-- `03-Archives/`: completed, paused, or inactive material.
-- `Inbox/`: unprocessed captures from Telegram, Obsidian Web Clipper, RSS, or manual notes.
-- `_system/`: operating notes, logs, indices, cost records, lint reports, and TELOS files.
+| Dir | Purpose |
+|-----|---------|
+| `00-Projects/` | Active efforts with a specific end-state |
+| `01-Areas/` | Ongoing domains of responsibility |
+| `02-Resources/` | Durable reference material |
+| `03-Archives/` | Completed / dormant work |
+| `Inbox/` | Unfiled captures (clear weekly) |
+| `_system/` | Agent operational state (logs, ledger, lint) |
 
-Agents must treat `CLAUDE.md` as the schema-as-config for all writes.
+## Quick start
 
+```bash
+# Ingest a URL
+python3 -m ultra_brain --vault ~/Documents/second-brain ingest https://example.com
+
+# Ask a question
+python3 -m ultra_brain --vault ~/Documents/second-brain query "what do I know about X?"
+
+# Daily digest
+python3 -m ultra_brain --vault ~/Documents/second-brain digest
+
+# Begin TELOS interview
+python3 -m ultra_brain --vault ~/Documents/second-brain telos-interview
+```

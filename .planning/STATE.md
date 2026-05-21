@@ -2,23 +2,23 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
-current_phase: 5 (wave-3-wiring)
+current_phase: 6 (wave-4-adapter)
 status: in-progress
 last_updated: "2026-05-21T01:13:14.985Z"
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 13
-  completed_plans: 9
-  percent: 69
+  completed_plans: 10
+  percent: 77
 ---
 
 # STATE — ultra-agents-brain
 
-**Updated:** 2026-05-20
+**Updated:** 2026-05-21
 **Milestone:** v1.5 — Agno Full Reconfiguration
 **Status:** in-progress
-**Current phase:** 5 (wave-3-wiring)
+**Current phase:** 6 (wave-4-adapter)
 
 ## Project Reference
 
@@ -63,3 +63,4 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 | PostgresDb with SqliteDb fallback when POSTGRES_DSN_SESSIONS absent | ✓ Dev/test environments need no Postgres |
 | Eval pre-commit routing (not CI/systemd) | ✓ ≤15s single-agent, ≤90s full suite |
 | EVAL_JUDGE_TIER env-var (default private-worker) | ✓ Free offline judge, override for releases |
+| note_path checked before actions_taken in extract_reply_text | ✓ IngestResult carries both keys; note_path is primary discriminator |

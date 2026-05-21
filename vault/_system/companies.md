@@ -1,17 +1,11 @@
 ---
-id: companies-index
+id: companies
 type: index
 title: "Companies Index"
-created_at: 2026-05-18T00:00:00Z
-para_tier: _system
-tags: [system, companies]
-status: active
-privacy: public
+updated_at: 2026-05-18T00:00:00Z
+privacy: operational
 ---
 
-# Companies Index
+# Companies
 
-Global index for company and organization entity pages.
-
-Use aliases in entity frontmatter instead of duplicate pages.
-
+Global entity index for companies and tools.

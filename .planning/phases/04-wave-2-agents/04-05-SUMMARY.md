@@ -74,3 +74,25 @@ PgVector-backed hybrid RAG knowledge layer and orchestrator-tier research agent 
 - `agentos/agents/research.py` — exists, imports clean
 - Commit `dcc45df` — verified in git log
 - 23/23 tests pass
+
+---
+
+## VERIFICATION — Phase 04 Complete
+
+**Verified:** 2026-05-20T22:44:00Z
+**Status:** PASSED
+**Score:** 5/5 plans verified, 49/49 tests green
+
+All must-haves confirmed via direct code inspection:
+
+| Plan | Key Must-Haves | Result |
+|------|---------------|--------|
+| 04-01 chat.py | memory_manager, enable_agentic_memory, session summaries, knowledge RAG, ChatReply | PASS |
+| 04-02 curator.py | memory_manager, enable_agentic_memory, CuratorResult, NO sessions, NO knowledge | PASS |
+| 04-03 ingest.py | memory_manager, ReasoningTools(add_instructions=True), IngestResult, default-worker | PASS |
+| 04-04 query.py | memory_manager, session summaries, knowledge RAG, ReasoningTools, QueryAnswer, default-worker | PASS |
+| 04-05 research.py + knowledge.py | orchestrator model, full memory+session+RAG stack, ResearchReport, PgVector+SentenceTransformerEmbedder | PASS |
+
+Test suite: `python -m pytest tests/ -q` → **49 passed in 5.73s**
+
+Full report: `.planning/phases/04-wave-2-agents/VERIFICATION.md`

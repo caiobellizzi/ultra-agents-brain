@@ -94,3 +94,17 @@ Must-have checklist:
 None — all agent connections are real (not hardcoded empty values). The SqliteDb fallback is intentional behavior for dev environments, not a stub.
 
 ## Self-Check: PASSED
+
+## Verification
+
+**Status:** PASSED — 2026-05-20
+**Score:** 6/6 must-haves verified
+**Report:** `.planning/phases/05-wave-3-agentos/05-VERIFICATION.md`
+
+All 6 must-haves confirmed by direct code inspection and 54/54 test run:
+- PostgresDb (with SqliteDb fallback) present and conditional on `POSTGRES_DSN_SESSIONS`
+- Shared `MemoryManager(db=db)` instantiated at module level
+- `AgentOS(enable_mcp_server=True, a2a_interface=True)` — both flags set on constructor
+- `get_app()` called without extra kwargs (correct for Agno 2.6.7)
+- All 5 agents receive `memory_manager=memory` at lines 59–64
+- 54/54 tests green in 6.59s

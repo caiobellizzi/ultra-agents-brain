@@ -32,7 +32,8 @@
     "tdd_mode": true,
     "pattern_mapper": true,
     "ai_integration_phase": true,
-    "use_worktrees": true
+    "use_worktrees": true,
+    "_auto_chain_active": false
   },
   "intel": {
     "enabled": true
