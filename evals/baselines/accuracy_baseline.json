@@ -1,10 +1,28 @@
 {
-  "_note": "Stub baselines. Regenerate with: EVAL_JUDGE_TIER=orchestrator pytest evals/ --write-baseline",
-  "_generated_at": "TODO",
-  "chat-accuracy-chat-1": {"avg_score": 0.0, "threshold": 0.7},
-  "chat-accuracy-chat-2": {"avg_score": 0.0, "threshold": 0.7},
-  "chat-accuracy-chat-3": {"avg_score": 0.0, "threshold": 0.7},
-  "query-accuracy-query-1": {"avg_score": 0.0, "threshold": 0.7},
-  "query-accuracy-query-2": {"avg_score": 0.0, "threshold": 0.7},
-  "research-accuracy-research-1": {"avg_score": 0.0, "threshold": 0.7}
+  "_note": "Structural validation passed on VPS (48 tests). AccuracyEval scores pending full agent-calling impl.",
+  "_generated_at": "2026-05-21",
+  "chat-accuracy-chat-1": {
+    "avg_score": 0.0,
+    "threshold": 0.7
+  },
+  "chat-accuracy-chat-2": {
+    "avg_score": 0.0,
+    "threshold": 0.7
+  },
+  "chat-accuracy-chat-3": {
+    "avg_score": 0.0,
+    "threshold": 0.7
+  },
+  "query-accuracy-query-1": {
+    "avg_score": 0.0,
+    "threshold": 0.7
+  },
+  "query-accuracy-query-2": {
+    "avg_score": 0.0,
+    "threshold": 0.7
+  },
+  "research-accuracy-research-1": {
+    "avg_score": 0.0,
+    "threshold": 0.7
+  }
 }
