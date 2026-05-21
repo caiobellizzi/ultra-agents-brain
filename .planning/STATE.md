@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
 current_phase: 7 (wave-5-evals)
 status: in-progress
-last_updated: "2026-05-21T01:18:00.000Z"
+last_updated: "2026-05-21T01:39:00Z"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 13
-  completed_plans: 11
-  percent: 85
+  completed_plans: 12
+  percent: 92
 ---
 
 # STATE — ultra-agents-brain
@@ -35,6 +35,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 - Phase 04 (wave-2-agents): All 5 agents reconfigured (memory, session, RAG, typed output) + PgVector knowledge layer — COMPLETE, verified 2026-05-20, 49 tests green
 - Phase 05 (wave-3-wiring): PostgresDb, shared MemoryManager, MCP + A2A wired into AgentOS — COMPLETE, 54 tests green
 - Phase 06 (wave-4-adapter): Telegram adapter typed response extraction, vault reindex entry point — COMPLETE, verified 2026-05-21, 55 tests green
+- Phase 07 plan 1 (wave-5-evals): evals/ scaffold — 30 smoke tests, 6 dataset stubs, Makefile, pytest.ini — COMPLETE, 2026-05-21
 
 ## Deferred to v2.0+
 
