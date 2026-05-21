@@ -4,13 +4,13 @@ milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
 current_phase: 7 (wave-5-evals)
 status: in-progress
-last_updated: "2026-05-21T01:39:00Z"
+last_updated: "2026-05-21T02:10:55.284Z"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 13
   completed_plans: 12
-  percent: 92
+  percent: 86
 ---
 
 # STATE — ultra-agents-brain
