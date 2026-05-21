@@ -1,0 +1,10 @@
+{
+  "_note": "Stub baselines. Regenerate with: EVAL_JUDGE_TIER=orchestrator pytest evals/ --write-baseline",
+  "_generated_at": "TODO",
+  "chat-perf": {"avg_run_time": 30.0, "threshold_seconds": 30},
+  "query-perf": {"avg_run_time": 20.0, "threshold_seconds": 20},
+  "research-perf": {"avg_run_time": 90.0, "threshold_seconds": 90},
+  "ingest-perf": {"avg_run_time": 60.0, "threshold_seconds": 60},
+  "curator-perf": {"avg_run_time": 30.0, "threshold_seconds": 30},
+  "supervisor-perf": {"avg_run_time": 20.0, "threshold_seconds": 20}
+}
