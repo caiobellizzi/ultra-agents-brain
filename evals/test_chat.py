@@ -6,6 +6,7 @@ import pytest
 os.environ.setdefault("LITELLM_MASTER_KEY", "test-key-for-evals")
 
 from agentos.schemas import ChatReply, VaultCitation  # noqa: E402
+from evals.datasets.chat_cases import CHAT_CASES  # noqa: E402
 
 
 @pytest.mark.smoke
@@ -38,3 +39,14 @@ def test_chat_reply_citations_are_vault_citations():
     reply = ChatReply(text="hi", citations=[citation])
     assert len(reply.citations) == 1
     assert reply.citations[0].path == "vault/note.md"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("case", CHAT_CASES, ids=[c["id"] for c in CHAT_CASES])
+def test_chat_field_assertions(case):
+    """Placeholder: real agent run + field assertions. Run with live agent."""
+    assert "input" in case
+    assert "expected_text_contains" in case
+    assert isinstance(case["expected_text_contains"], list)
+    assert "max_latency_seconds" in case
+    assert isinstance(case["max_latency_seconds"], (int, float))

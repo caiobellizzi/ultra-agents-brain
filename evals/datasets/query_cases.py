@@ -1,21 +1,23 @@
-# 3 hand-authored cases — to be filled in plan 07-02
 QUERY_CASES = [
     {
         "id": "query-1",
-        "input": "TODO: vault lookup question",
-        "expected_answer_contains": "TODO",
-        "expected_citations_count_gte": 1,
+        "input": "What does the eval seed note say about hybrid search?",
+        "expected_answer_contains": ["hybrid", "search"],
+        "expected_citations_have_tag": "eval-seed",
+        "max_latency_seconds": 20,
     },
     {
         "id": "query-2",
-        "input": "TODO: specific concept question",
-        "expected_answer_contains": "TODO",
-        "expected_citations_count_gte": 1,
+        "input": "What embedding model is used for local vector search?",
+        "expected_answer_contains": ["MiniLM", "sentence"],
+        "expected_citations_have_tag": "eval-seed",
+        "max_latency_seconds": 20,
     },
     {
         "id": "query-3",
-        "input": "TODO: question with no vault evidence",
-        "expected_answer_contains": "No vault evidence",
-        "expected_citations_count_gte": 0,
+        "input": "What topics are covered in my engineering knowledge area?",
+        "expected_answer_contains": [],
+        "expected_citations_have_tag": None,
+        "max_latency_seconds": 20,
     },
 ]

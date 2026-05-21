@@ -6,6 +6,7 @@ import pytest
 os.environ.setdefault("LITELLM_MASTER_KEY", "test-key-for-evals")
 
 from agentos.schemas import CuratorResult  # noqa: E402
+from evals.datasets.curator_cases import CURATOR_CASES  # noqa: E402
 
 
 @pytest.mark.smoke
@@ -40,3 +41,17 @@ def test_curator_result_instantiates_with_actions():
     )
     assert "ran digest" in result.actions_taken
     assert len(result.notes_touched) == 1
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("case", CURATOR_CASES, ids=[c["id"] for c in CURATOR_CASES])
+def test_curator_field_assertions(case):
+    """Placeholder: real agent run + field assertions. Run with live agent."""
+    assert "input" in case
+    assert isinstance(case["input"], str)
+    assert "expected_actions_non_empty" in case
+    assert isinstance(case["expected_actions_non_empty"], bool)
+    assert "expected_errors_empty" in case
+    assert isinstance(case["expected_errors_empty"], bool)
+    assert "max_latency_seconds" in case
+    assert isinstance(case["max_latency_seconds"], (int, float))

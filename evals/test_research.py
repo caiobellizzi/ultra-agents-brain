@@ -6,6 +6,7 @@ import pytest
 os.environ.setdefault("LITELLM_MASTER_KEY", "test-key-for-evals")
 
 from agentos.schemas import Finding, ResearchReport  # noqa: E402
+from evals.datasets.research_cases import RESEARCH_CASES  # noqa: E402
 
 
 @pytest.mark.smoke
@@ -38,3 +39,16 @@ def test_research_report_findings_are_finding_objects():
     report = ResearchReport(topic="Agents", findings=[finding])
     assert len(report.findings) == 1
     assert report.findings[0].summary == "Agents are autonomous"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("case", RESEARCH_CASES, ids=[c["id"] for c in RESEARCH_CASES])
+def test_research_field_assertions(case):
+    """Placeholder: real agent run + field assertions. Run with live agent."""
+    assert "input" in case
+    assert "expected_min_findings" in case
+    assert isinstance(case["expected_min_findings"], int)
+    assert "expected_min_next_questions" in case
+    assert isinstance(case["expected_min_next_questions"], int)
+    assert "max_latency_seconds" in case
+    assert isinstance(case["max_latency_seconds"], (int, float))

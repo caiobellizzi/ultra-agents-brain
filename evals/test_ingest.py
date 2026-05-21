@@ -6,6 +6,7 @@ import pytest
 os.environ.setdefault("LITELLM_MASTER_KEY", "test-key-for-evals")
 
 from agentos.schemas import IngestResult  # noqa: E402
+from evals.datasets.ingest_cases import INGEST_CASES  # noqa: E402
 
 
 @pytest.mark.smoke
@@ -36,3 +37,16 @@ def test_ingest_result_instantiates_with_note_path():
     assert result.frontmatter == {}
     assert result.tags == []
     assert result.needs_review is False
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("case", INGEST_CASES, ids=[c["id"] for c in INGEST_CASES])
+def test_ingest_field_assertions(case):
+    """Placeholder: real agent run + field assertions. Run with live agent."""
+    assert "input" in case
+    assert "expected_note_path_prefix" in case
+    assert isinstance(case["expected_note_path_prefix"], str)
+    assert "expected_min_tags" in case
+    assert isinstance(case["expected_min_tags"], int)
+    assert "max_latency_seconds" in case
+    assert isinstance(case["max_latency_seconds"], (int, float))

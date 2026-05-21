@@ -6,6 +6,7 @@ import pytest
 os.environ.setdefault("LITELLM_MASTER_KEY", "test-key-for-evals")
 
 from agentos.schemas import SupervisorRouting  # noqa: E402
+from evals.datasets.supervisor_routing import SUPERVISOR_CASES  # noqa: E402
 
 
 @pytest.mark.smoke
@@ -38,3 +39,15 @@ def test_supervisor_routing_members_are_known_agents():
     for member in known_agents:
         routing = SupervisorRouting(chosen_member=member)
         assert routing.chosen_member == member
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("case", SUPERVISOR_CASES, ids=[c["id"] for c in SUPERVISOR_CASES])
+def test_supervisor_field_assertions(case):
+    """Placeholder: real agent run + field assertions. Run with live agent."""
+    assert "input" in case
+    assert isinstance(case["input"], str)
+    assert "expected_agent" in case
+    assert case["expected_agent"] in {"chat", "query", "ingest", "research", "curator"}
+    assert "max_latency_seconds" in case
+    assert isinstance(case["max_latency_seconds"], (int, float))
