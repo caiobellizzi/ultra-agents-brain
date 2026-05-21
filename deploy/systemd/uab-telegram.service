@@ -10,7 +10,7 @@ EnvironmentFile=/opt/ultra-agents-brain/.env
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONPATH=/opt/ultra-agents-brain
 Environment=AGENTOS_BASE_URL=http://127.0.0.1:7000
-ExecStart=/usr/bin/python3 -m channels.telegram_adapter
+ExecStart=/opt/ultra-agents-brain/.venv/bin/python -m channels.telegram_adapter
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
