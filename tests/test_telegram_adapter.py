@@ -219,5 +219,57 @@ class TestCallbackDataValidation(unittest.TestCase):
         self.assertTrue(len(shape_warnings) > 0, f"Expected shape warning, got: {warnings}")
 
 
+class TestExtractReplyText(unittest.TestCase):
+    """Tests for extract_reply_text() and format_citations() typed response extraction."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = _import_adapter_with_env()
+
+    def test_extract_chat_reply_text_field(self):
+        response = {"output": {"text": "Here is what I found.", "citations": [{"title": "Note 1", "path": "vault/note1.md", "tags": []}]}}
+        self.assertEqual(self.mod.extract_reply_text(response), "Here is what I found.")
+
+    def test_extract_query_answer_field(self):
+        response = {"output": {"answer": "42", "citations": [], "confidence": 0.9}}
+        self.assertEqual(self.mod.extract_reply_text(response), "42")
+
+    def test_extract_research_report_findings(self):
+        response = {"output": {"findings": [{"summary": "Finding 1"}, {"summary": "Finding 2"}], "next_questions": ["Q1?"]}}
+        result = self.mod.extract_reply_text(response)
+        self.assertIn("Finding 1", result)
+        self.assertIn("Finding 2", result)
+        self.assertIn("Q1?", result)
+
+    def test_extract_ingest_result_note_path(self):
+        response = {"output": {"note_path": "vault/note.md", "actions_taken": []}}
+        result = self.mod.extract_reply_text(response)
+        self.assertIn("vault/note.md", result)
+
+    def test_extract_curator_result_actions_taken(self):
+        response = {"output": {"actions_taken": ["archived note", "tagged entry"]}}
+        result = self.mod.extract_reply_text(response)
+        self.assertIn("archived note", result)
+
+    def test_fallback_string_output(self):
+        response = {"output": "plain string"}
+        self.assertEqual(self.mod.extract_reply_text(response), "plain string")
+
+    def test_format_citations_empty_returns_empty_string(self):
+        self.assertEqual(self.mod.format_citations([]), "")
+
+    def test_format_citations_with_titles(self):
+        citations = [{"title": "My Note", "path": "vault/my-note.md"}]
+        result = self.mod.format_citations(citations)
+        self.assertIn("My Note", result)
+        self.assertIn("_Sources:_", result)
+
+    def test_format_citations_caps_at_three(self):
+        citations = [{"title": f"Note {i}"} for i in range(6)]
+        result = self.mod.format_citations(citations)
+        self.assertIn("Note 0", result)
+        self.assertNotIn("Note 3", result)
+
+
 if __name__ == "__main__":
     unittest.main()

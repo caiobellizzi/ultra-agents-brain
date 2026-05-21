@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
 current_phase: 5 (wave-3-wiring)
 status: in-progress
-last_updated: "2026-05-20T22:53:36.572Z"
+last_updated: "2026-05-21T01:13:14.985Z"
 progress:
   total_phases: 7
   completed_phases: 5
