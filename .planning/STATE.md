@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
-current_phase: 7 (wave-5-evals)
-status: in-progress
-last_updated: "2026-05-21T02:15:16.278Z"
+current_phase: complete (v1.5 milestone done)
+status: complete
+last_updated: "2026-05-21T02:25:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 7
@@ -17,15 +17,15 @@ progress:
 
 **Updated:** 2026-05-21
 **Milestone:** v1.5 — Agno Full Reconfiguration
-**Status:** in-progress
-**Current phase:** 7 (wave-5-evals)
+**Status:** complete
+**Current phase:** complete (v1.5 milestone done)
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Always-on personal knowledge layer — vault RAG + autonomous routines + HITL
-**Current focus:** v1.5 — Agno full reconfiguration sweep (Phases 2–7)
+**Current focus:** v1.5 — Agno full reconfiguration sweep (Phases 2–7) — COMPLETE
 
 ## Shipped
 
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 - Phase 04 (wave-2-agents): All 5 agents reconfigured (memory, session, RAG, typed output) + PgVector knowledge layer — COMPLETE, verified 2026-05-20, 49 tests green
 - Phase 05 (wave-3-wiring): PostgresDb, shared MemoryManager, MCP + A2A wired into AgentOS — COMPLETE, 54 tests green
 - Phase 06 (wave-4-adapter): Telegram adapter typed response extraction, vault reindex entry point — COMPLETE, verified 2026-05-21, 55 tests green
-- Phase 07 plan 1 (wave-5-evals): evals/ scaffold — 30 smoke tests, 6 dataset stubs, Makefile, pytest.ini — COMPLETE, 2026-05-21
+- Phase 07 (wave-5-evals): evals/ scaffold + 18 real cases + baselines + pre-commit router — COMPLETE, verified 2026-05-21, 30 smoke tests green
 
 ## Deferred to v2.0+
 
