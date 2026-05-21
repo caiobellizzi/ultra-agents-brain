@@ -45,5 +45,5 @@ Separate repo. Agno orchestrator + OpenHands coder sandbox. Reads from Brain via
 | 3. wave-1-schemas | v1.5 | 1/1 | Complete   | 2026-05-20 |
 | 4. wave-2-agents | v1.5 | 5/5 | Complete   | 2026-05-20 |
 | 5. wave-3-agentos | v1.5 | 1/1 | Complete   | 2026-05-20 |
-| 6. wave-4-adapter | v1.5 | 0/1 | Planned | — |
+| 6. wave-4-adapter | v1.5 | 0/1 | Planned    |  |
 | 7. wave-5-evals | v1.5 | 0/3 | Planned | — |
