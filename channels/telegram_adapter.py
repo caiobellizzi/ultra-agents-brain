@@ -124,10 +124,10 @@ def extract_reply_text(agent_response: dict) -> str:
                 )
             return text
         # CuratorResult / IngestResult — not user-facing in Telegram
-        if "actions_taken" in output:
-            return f"Done: {', '.join(output['actions_taken'][:3])}"
         if "note_path" in output:
             return f"Ingested → {output['note_path']}"
+        if "actions_taken" in output:
+            return f"Done: {', '.join(output['actions_taken'][:3])}"
 
     # Fallback: stringify whatever we got
     return str(output)

@@ -60,3 +60,13 @@ class VaultKnowledge:
 
 
 kb = VaultKnowledge()
+
+
+if __name__ == "__main__":
+    import sys
+    if "--reindex" in sys.argv:
+        vault = VaultKnowledge()
+        vault.load()
+        print(f"Vault reindex complete. {vault.file_count} files loaded.")
+    else:
+        print("Usage: python -m agentos.knowledge --reindex")
