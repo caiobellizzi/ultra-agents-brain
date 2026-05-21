@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
-current_phase: 6 (wave-4-adapter)
+current_phase: 7 (wave-5-evals)
 status: in-progress
-last_updated: "2026-05-21T01:13:14.985Z"
+last_updated: "2026-05-21T01:18:00.000Z"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
-  completed_plans: 10
-  percent: 77
+  completed_plans: 11
+  percent: 85
 ---
 
 # STATE — ultra-agents-brain
@@ -18,7 +18,7 @@ progress:
 **Updated:** 2026-05-21
 **Milestone:** v1.5 — Agno Full Reconfiguration
 **Status:** in-progress
-**Current phase:** 6 (wave-4-adapter)
+**Current phase:** 7 (wave-5-evals)
 
 ## Project Reference
 
@@ -34,6 +34,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 - Phase 03 (wave-1-schemas): Typed result schemas + model factory — COMPLETE, verified 2026-05-20
 - Phase 04 (wave-2-agents): All 5 agents reconfigured (memory, session, RAG, typed output) + PgVector knowledge layer — COMPLETE, verified 2026-05-20, 49 tests green
 - Phase 05 (wave-3-wiring): PostgresDb, shared MemoryManager, MCP + A2A wired into AgentOS — COMPLETE, 54 tests green
+- Phase 06 (wave-4-adapter): Telegram adapter typed response extraction, vault reindex entry point — COMPLETE, verified 2026-05-21, 55 tests green
 
 ## Deferred to v2.0+
 
