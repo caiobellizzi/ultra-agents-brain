@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: scoped-evals
+        name: Scoped agent evals (smoke)
+        entry: tools/precommit_eval_router.sh
+        language: script
+        pass_filenames: false
+        always_run: false
+        stages: [pre-commit]
