@@ -4,21 +4,21 @@ milestone: v1.5
 milestone_name: — Agno Full Reconfiguration
 current_phase: complete (v1.5 milestone done)
 status: complete
-last_updated: "2026-05-21T02:25:00.000Z"
+last_updated: "2026-05-22T18:32:00.000Z"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 9
+  completed_phases: 9
+  total_plans: 15
+  completed_plans: 15
   percent: 100
 ---
 
 # STATE — ultra-agents-brain
 
-**Updated:** 2026-05-21
+**Updated:** 2026-05-22
 **Milestone:** v1.5 — Agno Full Reconfiguration
 **Status:** complete
-**Current phase:** complete (v1.5 milestone done)
+**Current phase:** complete (v1.5 milestone done — phases 1–9)
 
 ## Project Reference
 
@@ -36,6 +36,8 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 - Phase 05 (wave-3-wiring): PostgresDb, shared MemoryManager, MCP + A2A wired into AgentOS — COMPLETE, 54 tests green
 - Phase 06 (wave-4-adapter): Telegram adapter typed response extraction, vault reindex entry point — COMPLETE, verified 2026-05-21, 55 tests green
 - Phase 07 (wave-5-evals): evals/ scaffold + 18 real cases + baselines + pre-commit router — COMPLETE, verified 2026-05-21, 30 smoke tests green
+- Phase 08 (litellm-nim-routing): NVIDIA NIM via LiteLLM + per-agent model routing — COMPLETE, 48/48 evals green, shipped 2026-05-22
+- Phase 09 (litellm-provider-label): Relabel Agno dashboard provider OpenAI→LiteLLM — COMPLETE, shipped 2026-05-22
 
 ## Deferred to v2.0+
 

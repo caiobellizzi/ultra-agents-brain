@@ -2,51 +2,23 @@
 
 ## Milestones
 
-- ✅ **v1.0 — Knowledge Layer on Agno** — Phase 1 (shipped 2026-05-19)
-- 🔄 **v1.5 — Agno Full Reconfiguration** — Phases 2–7 (in progress)
-- 📋 **v2.0 — Channels** — planned
-- 📋 **v3.0 — ultra-workshop** — planned (after 2–4 weeks v1.0 production operation)
+- ✅ **v1.0 — Knowledge Layer on Agno** — shipped 2026-05-19 ([archive](milestones/v1.0-ROADMAP.md))
+- ✅ **v1.5 — Agno Full Reconfiguration** — shipped 2026-05-22, 9 phases, 15 plans ([archive](milestones/v1.5-ROADMAP.md))
+- 📋 **v2.0 — Channels** — planned (Discord + WhatsApp adapters, vault GitHub sync)
+- 📋 **v3.0 — ultra-workshop** — planned (separate repo, after 2–4 weeks v1.5 production operation)
 
-## Phases
+## Current milestone
 
-<details>
-<summary>✅ v1.0 — Knowledge Layer on Agno (Phase 1) — SHIPPED 2026-05-19</summary>
+*No active milestone. Run `/gsd-new-milestone` to start v2.0.*
 
-- [x] Phase 1: ultra-brain-agno (1/1 plan) — completed 2026-05-19
+## Future milestones (preview)
 
-</details>
+### 📋 v2.0 — Channels
 
-### 🔄 v1.5 — Agno Full Reconfiguration
+Add Discord and WhatsApp adapters using the `channels/` pattern established in v1.0.
+Optional: webhook mode for Telegram. Vault GitHub remote for bidirectional sync.
 
-Upgrade all 5 agents from minimal v1.0 config to Agno 2.6.7 production-grade feature set:
-Postgres/pgvector, per-user semantic memory, agentic RAG over vault, ReasoningTools, Pydantic-typed outputs, MCP server, A2A protocol, and comprehensive evals.
+### 📋 v3.0 — ultra-workshop
 
-- [x] Phase 2: wave-0-infra — Postgres 16 + pgvector on VPS (1/1 plan) — completed 2026-05-20
-- [x] Phase 3: wave-1-schemas — Pydantic schemas + model factory (1 plan) (completed 2026-05-20)
-- [x] Phase 4: wave-2-agents — Per-agent reconfiguration, 5 commits (5 plans) (completed 2026-05-20)
-- [x] Phase 5: wave-3-agentos — AgentOS surface: PostgresDb, MemoryManager, MCP, A2A (1 plan) (completed 2026-05-20)
-- [ ] Phase 6: wave-4-adapter — Telegram adapter typed responses + vault reindex (1 plan)
-- [x] Phase 7: wave-5-evals — Evals scaffolding, coverage, and baselines (3 plans) (completed 2026-05-21)
-- [x] Phase 8: litellm-nim-routing — NVIDIA NIM via LiteLLM + per-agent model routing (1 plan) (completed 2026-05-22)
-- [x] Phase 9: litellm-provider-label — Relabel Agno dashboard provider OpenAI→LiteLLM (1 plan) (completed 2026-05-22)
-
-### 📋 v2.0 — Channels (Planned)
-
-Add Discord and WhatsApp adapters using the `channels/` pattern established in v1.0. Optional: webhook mode for Telegram.
-
-### 📋 v3.0 — ultra-workshop (Planned)
-
-Separate repo. Agno orchestrator + OpenHands coder sandbox. Reads from Brain via HTTP. Begins only after v1.0 has been running daily for 2–4 weeks.
-
-## Progress
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|---------------|--------|-----------|
-| 1. ultra-brain-agno | v1.0 | 1/1 | Complete | 2026-05-19 |
-| 2. wave-0-infra | v1.5 | 1/1 | Complete | 2026-05-20 |
-| 3. wave-1-schemas | v1.5 | 1/1 | Complete   | 2026-05-20 |
-| 4. wave-2-agents | v1.5 | 5/5 | Complete   | 2026-05-20 |
-| 5. wave-3-agentos | v1.5 | 1/1 | Complete   | 2026-05-20 |
-| 6. wave-4-adapter | v1.5 | 0/1 | Planned    |  |
-| 7. wave-5-evals | v1.5 | 3/3 | Complete   | 2026-05-21 |
-| 8. litellm-nim-routing | v1.5 | 0/1 | Planned    |  |
+Separate repo. Agno orchestrator + OpenHands coder sandbox. Reads from Brain via HTTP.
+Begins only after v1.5 has been running daily for 2–4 weeks.

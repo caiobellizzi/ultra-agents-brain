@@ -1,6 +1,6 @@
 # ultra-agents-brain
 
-**Status:** Active — v1.0 shipped 2026-05-19
+**Status:** Active — v1.5 shipped 2026-05-22
 **Created:** 2026-05-19
 
 ## What it is
@@ -88,16 +88,30 @@ Vault (/srv/second-brain, Markdown) ←→ AgentOS (FastAPI, Agno, :7000)
 | ultra-workshop deferred 2–4 weeks | — Pending | Validate Brain in daily use before building Workshop |
 | Hermes Docker image was hallucinated | ✓ Resolved | Replaced with native Python + Agno from the start |
 
-## Context
+## Current State (post-v1.5)
 
-**Shipped v1.0 (2026-05-19):** 1 phase, 1 plan, ~20 commits in one day.
-~1,200 LOC Python across `agentos/`, `channels/`, `deploy/systemd/`.
-38 automated tests (pytest). 5 systemd units on VPS. Both services active.
+**Shipped v1.5 (2026-05-22):** 9 phases, 15 plans, 51 commits over 3 days. 128 files, +6,093 / −950 LOC.
+All 5 agents now run on Agno 2.6.7 production-grade config: Postgres+pgvector, semantic memory, agentic RAG, ReasoningTools, Pydantic-typed outputs, MCP+A2A, 5-tier LiteLLM routing with NVIDIA NIM. 48-case eval suite green with pre-commit router.
 
-Known tech debt: CostLedger via litellm callback (fires only in SDK mode, not proxy mode — monitor ledger file after 1 week of use). Vault GitHub remote sync not yet wired.
+**Tech debt forward:** pre-commit install + real baseline regeneration (Phase 07), CostLedger verification after 1 week of use, VERIFICATION.md backfill for phases 1/2/8/9 (docs only).
 
-**Next:** Let Brain run for 2–4 weeks. Monitor vault quality, digest relevance, cost ledger. Then plan v2.0 (Channels) or v3.0 (ultra-workshop) based on operational learnings.
+## Next Milestone Goals
+
+**v2.0 — Channels** (not yet started):
+- Discord adapter using `channels/` pattern
+- WhatsApp adapter using `channels/` pattern
+- Vault GitHub remote sync (Mac ↔ VPS via Obsidian-Git + cron)
+- Optional: Telegram webhook mode (replace long-poll)
+
+**v3.0 — ultra-workshop** (separate repo, gated): begins after 2–4 weeks of v1.5 production operation.
+
+<details>
+<summary>Earlier context (v1.0 shipped 2026-05-19)</summary>
+
+1 phase, 1 plan, ~20 commits in one day. ~1,200 LOC Python across `agentos/`, `channels/`, `deploy/systemd/`. 38 automated tests. 5 systemd units on VPS.
+
+</details>
 
 ---
 
-*Last updated: 2026-05-19 after v1.0 milestone*
+*Last updated: 2026-05-22 after v1.5 milestone*
