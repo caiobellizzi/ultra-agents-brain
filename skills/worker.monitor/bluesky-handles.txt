@@ -1,0 +1,14 @@
+# Bluesky handles for AI/ML signal — polled by `python -m ultra_brain bluesky`
+# Format: one handle per line, # comments
+# Verify with: curl "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=<handle>&limit=1"
+
+karpathy.bsky.social
+simonw.bsky.social
+swyx.io
+jeremyphoward.bsky.social
+yoavgo.bsky.social
+
+# Verified inactive / not on Bluesky as of 2026-05-22 — remove unless they migrate:
+# fchollet.bsky.social — 400 / handle not registered
+# ylecun.bsky.social — 400 / handle not registered
+# sama.bsky.social — exists but empty feed (likely squatter)

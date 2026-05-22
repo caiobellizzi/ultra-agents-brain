@@ -56,6 +56,10 @@ def _parser() -> argparse.ArgumentParser:
     monitor_p.add_argument("--feeds", default="feeds.txt", help="Path to feeds text file (one URL per line)")
     monitor_p.add_argument("--score", action="store_true")
 
+    bluesky_p = sub.add_parser("bluesky")
+    bluesky_p.add_argument("--handles", default="skills/worker.monitor/bluesky-handles.txt", help="Path to handles file (one per line)")
+    bluesky_p.add_argument("--limit", type=int, default=10, help="Max posts per handle")
+
     sub.add_parser("review")
 
     daily_b = sub.add_parser("daily-brief")
@@ -130,6 +134,16 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         new_items = run_poll(feeds_path, vault)
         print(f"Monitor: {len(new_items)} new items filed to Inbox")
+        return 0
+
+    if args.command == "bluesky":
+        from .bluesky import run_poll_bluesky
+        handles_path = Path(args.handles)
+        if not handles_path.exists():
+            print(f"No handles file at {handles_path}")
+            return 0
+        new_items = run_poll_bluesky(handles_path, vault, limit=args.limit)
+        print(f"Bluesky: {len(new_items)} new posts filed to Inbox")
         return 0
 
     if args.command == "review":
