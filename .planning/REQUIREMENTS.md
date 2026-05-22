@@ -72,4 +72,23 @@
 
 ## Traceability
 
-Filled by roadmap (each REQ-ID → phase).
+| REQ-ID  | Phase                                      |
+|---------|--------------------------------------------|
+| DIAG-01 | 10 — Diagnostic Audit                       |
+| DIAG-02 | 10 — Diagnostic Audit                       |
+| MEM-01  | 11 — Memory Surface Activation              |
+| MEM-02  | 11 — Memory Surface Activation              |
+| MEM-03  | 11 — Memory Surface Activation              |
+| EVAL-01 | 12 — Evals Surface Activation               |
+| EVAL-02 | 12 — Evals Surface Activation               |
+| EVAL-03 | 12 — Evals Surface Activation               |
+| KNOW-01 | 13 — Knowledge Surface Activation           |
+| KNOW-02 | 13 — Knowledge Surface Activation           |
+| KNOW-03 | 13 — Knowledge Surface Activation           |
+| APPR-01 | 14 — Approvals Surface Activation           |
+| APPR-02 | 14 — Approvals Surface Activation           |
+| APPR-03 | 14 — Approvals Surface Activation           |
+| OBS-01  | 11, 12, 13, 14 (instrumented per surface)   |
+| OBS-02  | 15 — worker.monitor Polish + Final Verify   |
+| MON-01  | 15 — worker.monitor Polish + Final Verify   |
+| MON-02  | 15 — worker.monitor Polish + Final Verify   |
