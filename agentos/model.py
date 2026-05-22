@@ -4,7 +4,22 @@ from __future__ import annotations
 
 import os
 
+from dataclasses import dataclass
+
 from agno.models.openai import OpenAIChat
+
+
+@dataclass
+class LiteLLMChat(OpenAIChat):
+    """OpenAIChat against the LiteLLM proxy — relabels dashboard provider.
+
+    Both parent classes (Model, OpenAIChat) are @dataclass, so the subclass
+    must also be decorated for these field-default overrides to take effect.
+    """
+
+    name: str = "LiteLLM"
+    provider: str = "LiteLLM"
+
 
 LITELLM_BASE_URL = os.environ.get("LITELLM_BASE_URL", "http://127.0.0.1:4000/v1")
 LITELLM_API_KEY = os.environ["LITELLM_MASTER_KEY"]
@@ -36,4 +51,4 @@ def chat_model(tier: str = "cheap-worker") -> OpenAIChat:
     """
     env_var = _TIER_ENV.get(tier)
     model_id = os.environ.get(env_var, tier) if env_var else tier
-    return OpenAIChat(id=model_id, base_url=LITELLM_BASE_URL, api_key=LITELLM_API_KEY)
+    return LiteLLMChat(id=model_id, base_url=LITELLM_BASE_URL, api_key=LITELLM_API_KEY)

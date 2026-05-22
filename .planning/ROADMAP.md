@@ -28,6 +28,7 @@ Postgres/pgvector, per-user semantic memory, agentic RAG over vault, ReasoningTo
 - [ ] Phase 6: wave-4-adapter — Telegram adapter typed responses + vault reindex (1 plan)
 - [x] Phase 7: wave-5-evals — Evals scaffolding, coverage, and baselines (3 plans) (completed 2026-05-21)
 - [x] Phase 8: litellm-nim-routing — NVIDIA NIM via LiteLLM + per-agent model routing (1 plan) (completed 2026-05-22)
+- [x] Phase 9: litellm-provider-label — Relabel Agno dashboard provider OpenAI→LiteLLM (1 plan) (completed 2026-05-22)
 
 ### 📋 v2.0 — Channels (Planned)
 

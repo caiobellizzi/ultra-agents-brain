@@ -88,7 +88,7 @@ python -m ultra_brain telos-check
 The system has three runtime layers:
 
 - **AgentOS** (`agentos/`) — FastAPI app hosting five Agno agents: `chat`, `ingest`, `query`, `research`, `curator`. Exposes the standard Agno HTTP surface compatible with the hosted dashboard at `https://os.agno.com`.
-- **LiteLLM proxy** — Docker service that routes model calls across a 5-tier matrix: `orchestrator` (NVIDIA NIM DeepSeek V4 Pro → GLM-5.1 → cloud-sonnet), `research-worker` (NIM DeepSeek V4 Flash → Llama 3.1 405B → cloud-sonnet), `default-worker` (local LM Studio Gemma → NIM Llama 3.3 70B → Mistral 2 Large → cloud-groq), `cheap-worker` and `private-worker` (local-only). NIM is treated as cloud-allowed (equivalent privacy posture to Anthropic/Groq); `private-worker` stays strictly local by contract.
+- **LiteLLM proxy** — Docker service that routes model calls across a 5-tier matrix (Agno dashboard reports `provider: LiteLLM` for every agent; the real upstream depends on the tier): `orchestrator` (NVIDIA NIM DeepSeek V4 Pro → GLM-5.1 → cloud-sonnet), `research-worker` (NIM DeepSeek V4 Flash → Llama 3.1 405B → cloud-sonnet), `default-worker` (local LM Studio Gemma → NIM Llama 3.3 70B → Mistral 2 Large → cloud-groq), `cheap-worker` and `private-worker` (local-only). NIM is treated as cloud-allowed (equivalent privacy posture to Anthropic/Groq); `private-worker` stays strictly local by contract.
 - **Telegram bot / channels** — Calls `POST /agents/{agent_id}/runs` on the AgentOS host. Configured via `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_CHAT_IDS`.
 
 The `ultra_brain/` package provides standalone CLI wrappers and reusable helpers (cost tracking, vault sync, trust checks, Markdown utilities) that the agents and scripts share.
