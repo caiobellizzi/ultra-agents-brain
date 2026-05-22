@@ -224,6 +224,60 @@ def _message_body(text: str, agent_id: str) -> str:
     return text.strip()
 
 
+# Utility commands run ultra_brain CLI subprocesses (not AgentOS agents).
+# Keys are matched as exact first-word; values are ultra_brain CLI args.
+UTILITY_COMMANDS: dict[str, list[str]] = {
+    "/brief": ["daily-brief"],
+    "/monitor": ["monitor", "--feeds", "skills/worker.monitor/feeds.txt"],
+    "/bluesky": ["bluesky", "--handles", "skills/worker.monitor/bluesky-handles.txt"],
+}
+
+UTILITY_HELP = (
+    "ultra-agents-brain utility commands:\n"
+    "/brief — generate today's daily brief\n"
+    "/monitor — poll RSS feeds now\n"
+    "/bluesky — poll Bluesky handles now\n"
+    "/help — show this list"
+)
+
+PROJECT_ROOT = os.getenv("UAB_PROJECT_ROOT", "/opt/ultra-agents-brain")
+UAB_VAULT = os.getenv("UAB_VAULT", "/srv/second-brain")
+
+
+async def _handle_utility_command(
+    client: httpx.AsyncClient,
+    chat_id: int,
+    args: list[str],
+    cmd_word: str,
+) -> None:
+    """Run an ultra_brain CLI subcommand and send the result back to Telegram."""
+    cmd = [
+        f"{PROJECT_ROOT}/.venv/bin/python", "-m", "ultra_brain",
+        "--vault", UAB_VAULT,
+    ] + args
+    await send_message(client, chat_id, f"▶️ Running `{cmd_word}`...")
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        cwd=PROJECT_ROOT,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=600)
+    except asyncio.TimeoutError:
+        proc.kill()
+        await send_message(client, chat_id, f"⏰ `{cmd_word}` timed out after 600s")
+        return
+    out = (stdout or b"").decode("utf-8", errors="replace").strip()
+    err = (stderr or b"").decode("utf-8", errors="replace").strip()
+    if proc.returncode != 0:
+        body = (err or out)[-1500:]
+        await send_message(client, chat_id, f"❌ `{cmd_word}` exit {proc.returncode}\n```\n{body}\n```")
+    else:
+        body = (out or "(no output)")[-2000:]
+        await send_message(client, chat_id, f"✅ `{cmd_word}`\n```\n{body}\n```")
+
+
 async def route_message(
     client: httpx.AsyncClient,
     text: str,
@@ -231,6 +285,16 @@ async def route_message(
     user_id: int,
 ) -> None:
     """Route an incoming Telegram message to the correct AgentOS agent."""
+    # Utility commands bypass AgentOS and run CLI subprocesses
+    first_word = text.strip().split()[0] if text.strip() else ""
+    cmd_word = first_word.split("@")[0]  # strip @botname suffix
+    if cmd_word == "/help" or cmd_word == "/start":
+        await send_message(client, chat_id, UTILITY_HELP)
+        return
+    if cmd_word in UTILITY_COMMANDS:
+        await _handle_utility_command(client, chat_id, UTILITY_COMMANDS[cmd_word], cmd_word)
+        return
+
     agent_id = _agent_id_for(text)
     body = _message_body(text, agent_id)
     session_id = f"telegram-{chat_id}"
