@@ -1,26 +1,71 @@
-# LiteLLM config — LM Studio primary (zero API cost in v1).
+# LiteLLM config — 5-tier routing: local LM Studio + NVIDIA NIM + cloud fallbacks.
 #
 # Local dev:  LM_STUDIO_API_BASE=http://localhost:1234/v1
 # VPS access: set LM_STUDIO_API_BASE to the LM Link endpoint (LM Studio → LM Link tab)
 #
-# LM Studio serves whatever model is currently loaded. Set LM_STUDIO_MODEL to
-# the exact model identifier shown in LM Studio (e.g. "qwen3-32b-mlx" or
-# "lmstudio-community/qwen3-32b"). All tiers can share the same model while
-# you're testing; swap cheap-worker to a lighter model when you load one.
+# Tier matrix (see .planning/phases/08-litellm-nim-routing/08-01-PLAN.md):
+#   orchestrator      → NIM DeepSeek V4 Pro    → NIM GLM-5.1               → cloud-sonnet
+#   research-worker   → NIM DeepSeek V4 Flash  → NIM Llama 3.1 405B        → cloud-sonnet
+#   default-worker    → local Gemma            → NIM Llama 3.3 70B → Mistral 2 Large → cloud-groq
+#   cheap-worker      → local Gemma (no NIM — would saturate 40 RPM)
+#   private-worker    → local Gemma (local-only by contract)
+#
+# NOTE: do NOT add model_info.tier — LiteLLM 1.85 silently breaks deployments
+# on invalid tier values (see claude-mem obs 19751).
 
 model_list:
-  # Tier A — orchestrator: heavy model loaded in LM Studio
+  # Tier A — orchestrator: NIM DeepSeek V4 Pro (reasoning model, thinking on)
   - model_name: orchestrator
     litellm_params:
-      model: openai/google/gemma-4-e4b
-      api_base: os.environ/LM_STUDIO_API_BASE
-      api_key: os.environ/LM_STUDIO_API_KEY
+      model: nvidia_nim/deepseek-ai/deepseek-v4-pro
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 300
+      max_retries: 1
+      extra_body:
+        chat_template_kwargs:
+          thinking: true
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  - model_name: orchestrator-failover
+    litellm_params:
+      model: nvidia_nim/z-ai/glm5.1
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 300
+      max_retries: 1
+      extra_body:
+        chat_template_kwargs:
+          thinking: true
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  # Tier B — research-worker: NIM DeepSeek V4 Flash (1M ctx, thinking on)
+  - model_name: research-worker
+    litellm_params:
+      model: nvidia_nim/deepseek-ai/deepseek-v4-flash
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 300
+      max_retries: 1
+      extra_body:
+        chat_template_kwargs:
+          thinking: true
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  - model_name: research-worker-failover
+    litellm_params:
+      model: nvidia_nim/meta/llama-3.1-405b-instruct
+      api_key: os.environ/NVIDIA_NIM_API_KEY
       timeout: 300
       max_retries: 1
     model_info:
       mode: chat
+      supports_response_schema: false
 
-  # Tier B — default worker: same model (or lighter one if loaded)
+  # Tier C — default-worker: local Gemma primary, NIM fallback
   - model_name: default-worker
     litellm_params:
       model: openai/google/gemma-4-e4b
@@ -30,9 +75,29 @@ model_list:
       max_retries: 1
     model_info:
       mode: chat
+      supports_response_schema: false
 
-  # Tier C — cheap/fast worker: use LM_STUDIO_FAST_MODEL if you load a
-  # second lighter model in LM Studio; falls back to primary otherwise
+  - model_name: default-worker-nim
+    litellm_params:
+      model: nvidia_nim/meta/llama-3.3-70b-instruct
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 180
+      max_retries: 1
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  - model_name: default-worker-nim-failover
+    litellm_params:
+      model: nvidia_nim/mistralai/mistral-2-large-instruct
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 180
+      max_retries: 1
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  # Tier D — cheap-worker: local-only (curator batch RSS would saturate NIM 40 RPM)
   - model_name: cheap-worker
     litellm_params:
       model: openai/google/gemma-4-e4b
@@ -42,19 +107,21 @@ model_list:
       max_retries: 1
     model_info:
       mode: chat
+      supports_response_schema: false
 
-  # Tier D — private (same endpoint, local only)
+  # Tier E — private-worker: local-only by contract
   - model_name: private-worker
     litellm_params:
       model: openai/google/gemma-4-e4b
       api_base: os.environ/LM_STUDIO_API_BASE
       api_key: os.environ/LM_STUDIO_API_KEY
-      timeout: 300
+      timeout: 30
       max_retries: 1
     model_info:
       mode: chat
+      supports_response_schema: false
 
-  # Cloud fallbacks — only when LM Studio is unreachable
+  # Cloud last-resort fallbacks
   - model_name: cloud-sonnet
     litellm_params:
       model: anthropic/claude-sonnet-4-6
@@ -63,6 +130,7 @@ model_list:
       max_retries: 2
     model_info:
       mode: chat
+      supports_response_schema: false
 
   - model_name: cloud-groq
     litellm_params:
@@ -72,18 +140,24 @@ model_list:
       max_retries: 2
     model_info:
       mode: chat
+      supports_response_schema: false
 
 litellm_settings:
-  request_timeout: 300
+  drop_params: true
+  callbacks: strip_response_format.proxy_handler_instance
+  request_timeout: 600
   num_retries: 1
   fallbacks:
-    - orchestrator: ["cloud-sonnet"]
-    - default-worker: ["cloud-sonnet", "cloud-groq"]
-    - cheap-worker: ["default-worker", "cloud-groq"]
-    - private-worker: ["cheap-worker"]
+    - orchestrator: ["orchestrator-failover", "cloud-sonnet"]
+    - orchestrator-failover: ["cloud-sonnet"]
+    - research-worker: ["research-worker-failover", "cloud-sonnet"]
+    - research-worker-failover: ["cloud-sonnet"]
+    - default-worker: ["default-worker-nim", "default-worker-nim-failover", "cloud-groq"]
+    - default-worker-nim: ["default-worker-nim-failover", "cloud-groq"]
+    - default-worker-nim-failover: ["cloud-groq"]
   context_window_fallbacks:
-    - cheap-worker: ["default-worker"]
-    - default-worker: ["cloud-sonnet"]
+    - default-worker: ["research-worker"]
+    - orchestrator: ["research-worker"]
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
