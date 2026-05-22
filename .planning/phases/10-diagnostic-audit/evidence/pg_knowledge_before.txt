@@ -1,0 +1,4 @@
+=== agno_knowledge database tables/counts ===
+vault|0|0|0
+Did not find any relations.
+Did not find any relations.

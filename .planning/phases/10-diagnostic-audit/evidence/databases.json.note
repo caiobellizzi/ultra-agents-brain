@@ -1,0 +1,3 @@
+HTTP 404 — /databases endpoint not implemented in agno 2.6.7 (only /databases/all/migrate exists). db_id captured from /config instead.
+Not Found
+HTTP 404

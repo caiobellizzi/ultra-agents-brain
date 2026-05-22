@@ -1,0 +1,124 @@
+{
+    "os_id": "3c535456-bec2-576e-9e24-16c38d83d4e1",
+    "description": "Second-brain agents over a markdown vault.",
+    "available_models": [],
+    "os_database": "e9a76996-9f0a-535a-bd92-c215f571af96",
+    "databases": [
+        "e9a76996-9f0a-535a-bd92-c215f571af96"
+    ],
+    "session": {
+        "dbs": [
+            {
+                "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96",
+                "domain_config": {
+                    "display_name": "e9a76996-9f0a-535a-bd92-c215f571af96"
+                },
+                "tables": [
+                    "agno_sessions"
+                ]
+            }
+        ]
+    },
+    "metrics": {
+        "dbs": [
+            {
+                "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96",
+                "domain_config": {
+                    "display_name": "e9a76996-9f0a-535a-bd92-c215f571af96"
+                },
+                "tables": [
+                    "agno_metrics"
+                ]
+            }
+        ]
+    },
+    "memory": {
+        "dbs": [
+            {
+                "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96",
+                "domain_config": {
+                    "display_name": "e9a76996-9f0a-535a-bd92-c215f571af96"
+                },
+                "tables": [
+                    "agno_memories"
+                ]
+            }
+        ]
+    },
+    "knowledge": {
+        "dbs": [],
+        "knowledge_instances": []
+    },
+    "evals": {
+        "dbs": [
+            {
+                "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96",
+                "domain_config": {
+                    "display_name": "e9a76996-9f0a-535a-bd92-c215f571af96"
+                },
+                "tables": [
+                    "agno_eval_runs"
+                ]
+            }
+        ]
+    },
+    "traces": {
+        "dbs": [
+            {
+                "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96",
+                "domain_config": {
+                    "display_name": "e9a76996-9f0a-535a-bd92-c215f571af96"
+                }
+            }
+        ]
+    },
+    "agents": [
+        {
+            "id": "chat",
+            "name": "chat",
+            "description": "Conversational front-end. Cite the vault when relevant.",
+            "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96"
+        },
+        {
+            "id": "curator",
+            "name": "curator",
+            "description": "Vault maintenance: daily digest, weekly review, lint, RSS polling.",
+            "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96"
+        },
+        {
+            "id": "ingest",
+            "name": "ingest",
+            "description": "Ingest URLs and files into the second-brain vault.",
+            "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96"
+        },
+        {
+            "id": "query",
+            "name": "query",
+            "description": "Answer strictly from vault contents with citations.",
+            "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96"
+        },
+        {
+            "id": "research",
+            "name": "research",
+            "description": "Plan multi-angle research, summarize each angle, aggregate into a single vault note.",
+            "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96"
+        }
+    ],
+    "teams": [
+        {
+            "id": "supervisor",
+            "name": "supervisor",
+            "description": "Central orchestrator. Coordinates specialized agents to handle user requests.",
+            "db_id": "e9a76996-9f0a-535a-bd92-c215f571af96",
+            "mode": "coordinate"
+        }
+    ],
+    "workflows": [],
+    "interfaces": [
+        {
+            "type": "a2a",
+            "version": "1.0",
+            "route": "/a2a"
+        }
+    ]
+}

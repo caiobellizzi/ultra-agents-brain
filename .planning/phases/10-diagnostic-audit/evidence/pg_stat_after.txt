@@ -1,0 +1,15 @@
+agno_approvals|0|0|0
+agno_component_configs|0|0|0
+agno_component_links|0|0|0
+agno_components|0|0|0
+agno_eval_runs|0|0|0
+agno_knowledge|0|0|0
+agno_learnings|0|0|0
+agno_memories|1|1|0
+agno_metrics|2|2|0
+agno_schedule_runs|0|0|0
+agno_schedules|0|0|0
+agno_schema_versions|14|0|0
+agno_sessions|39|3|0
+agno_spans|114|0|0
+agno_traces|42|72|0

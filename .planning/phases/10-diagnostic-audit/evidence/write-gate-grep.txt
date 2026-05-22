@@ -1,0 +1,27 @@
+Binary file agentos/tools/__pycache__/vault.cpython-313.pyc matches
+agentos/tools/vault.py:4:native @tool(requires_confirmation=True) so that runs pause for HITL approval
+agentos/tools/vault.py:35:@tool(requires_confirmation=True)
+agentos/tools/vault.py:56:@tool(requires_confirmation=True)
+agentos/agents/ingest.py:3:ingest_to_vault is decorated with @tool(requires_confirmation=True) so Agno
+agentos/agents/ingest.py:29:        enable_agentic_memory=True,
+agentos/agents/ingest.py:30:        update_memory_on_run=True,
+agentos/agents/query.py:43:        enable_agentic_memory=True,
+agentos/agents/query.py:44:        update_memory_on_run=True,
+agentos/agents/query.py:47:        enable_session_summaries=True,
+agentos/agents/research.py:31:        enable_agentic_memory=True,
+agentos/agents/research.py:32:        update_memory_on_run=True,
+agentos/agents/research.py:34:        enable_session_summaries=True,
+agentos/agents/supervisor.py:49:        enable_agentic_memory=True,
+agentos/agents/supervisor.py:50:        update_memory_on_run=True,
+agentos/agents/supervisor.py:51:        enable_session_summaries=True,
+Binary file agentos/agents/__pycache__/chat.cpython-313.pyc matches
+Binary file agentos/agents/__pycache__/curator.cpython-313.pyc matches
+Binary file agentos/agents/__pycache__/research.cpython-313.pyc matches
+Binary file agentos/agents/__pycache__/supervisor.cpython-313.pyc matches
+Binary file agentos/agents/__pycache__/ingest.cpython-313.pyc matches
+Binary file agentos/agents/__pycache__/query.cpython-313.pyc matches
+agentos/agents/chat.py:43:        enable_agentic_memory=True,
+agentos/agents/chat.py:44:        update_memory_on_run=True,
+agentos/agents/chat.py:47:        enable_session_summaries=True,
+agentos/agents/curator.py:25:        enable_agentic_memory=True,
+agentos/agents/curator.py:26:        update_memory_on_run=True,

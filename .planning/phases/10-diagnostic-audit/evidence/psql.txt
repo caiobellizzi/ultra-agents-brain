@@ -1,0 +1,219 @@
+================================================================
+agno_sessions database: \dt + schema + counts + sample for each surface table
+================================================================
+Did not find any relations.
+=============== agno_memories ===============
+Did not find any relation named "agno_memories".
+ERROR:  relation "agno_memories" does not exist
+LINE 1: SELECT count(*) FROM agno_memories;
+                             ^
+ERROR:  relation "agno_memories" does not exist
+LINE 1: SELECT * FROM agno_memories ORDER BY updated_at DESC NULLS L...
+                      ^
+=============== agno_eval_runs ===============
+Did not find any relation named "agno_eval_runs".
+ERROR:  relation "agno_eval_runs" does not exist
+LINE 1: SELECT count(*) FROM agno_eval_runs;
+                             ^
+ERROR:  relation "agno_eval_runs" does not exist
+LINE 1: SELECT * FROM agno_eval_runs ORDER BY updated_at DESC NULLS ...
+                      ^
+=============== agno_knowledge ===============
+Did not find any relation named "agno_knowledge".
+ERROR:  relation "agno_knowledge" does not exist
+LINE 1: SELECT count(*) FROM agno_knowledge;
+                             ^
+ERROR:  relation "agno_knowledge" does not exist
+LINE 1: SELECT * FROM agno_knowledge ORDER BY updated_at DESC NULLS ...
+                      ^
+=============== agno_approvals ===============
+Did not find any relation named "agno_approvals".
+ERROR:  relation "agno_approvals" does not exist
+LINE 1: SELECT count(*) FROM agno_approvals;
+                             ^
+ERROR:  relation "agno_approvals" does not exist
+LINE 1: SELECT * FROM agno_approvals ORDER BY updated_at DESC NULLS ...
+                      ^
+=============== agno_knowledge DB ===============
+Did not find any relations.
+      List of schemas
+  Name  |       Owner       
+--------+-------------------
+ ai     | uab
+ public | pg_database_owner
+(2 rows)
+
+
+=============== SCHEMA DISCOVERY ===============
+      List of schemas
+  Name  |       Owner       
+--------+-------------------
+ ai     | uab
+ public | pg_database_owner
+(2 rows)
+
+ schemaname |        relname         
+------------+------------------------
+ ai         | agno_approvals
+ ai         | agno_component_configs
+ ai         | agno_component_links
+ ai         | agno_components
+ ai         | agno_eval_runs
+ ai         | agno_knowledge
+ ai         | agno_learnings
+ ai         | agno_memories
+ ai         | agno_metrics
+ ai         | agno_schedule_runs
+ ai         | agno_schedules
+ ai         | agno_schema_versions
+ ai         | agno_sessions
+ ai         | agno_spans
+ ai         | agno_traces
+(15 rows)
+
+
+=============== SURFACE TABLES (schema=ai) ===============
+----- ai.agno_memories -----
+                    Table "ai.agno_memories"
+   Column   |       Type        | Collation | Nullable | Default 
+------------+-------------------+-----------+----------+---------
+ memory_id  | character varying |           | not null | 
+ memory     | jsonb             |           | not null | 
+ feedback   | text              |           |          | 
+ input      | text              |           |          | 
+ agent_id   | character varying |           |          | 
+ team_id    | character varying |           |          | 
+ user_id    | character varying |           |          | 
+ topics     | jsonb             |           |          | 
+ created_at | bigint            |           | not null | 
+ updated_at | bigint            |           |          | 
+Indexes:
+    "agno_memories_pkey" PRIMARY KEY, btree (memory_id)
+    "idx_agno_memories_created_at" btree (created_at)
+    "idx_agno_memories_updated_at" btree (updated_at)
+    "idx_agno_memories_user_id" btree (user_id)
+
+ row_count 
+-----------
+         1
+(1 row)
+
+              memory_id               | user_id  | agent_id | team_id |           topics           | updated_at 
+--------------------------------------+----------+----------+---------+----------------------------+------------
+ 923150df-b1d9-4390-b04b-c765bbaccf0b | workshop |          |         | ["work", "coding", "task"] | 1779476451
+(1 row)
+
+----- ai.agno_eval_runs -----
+                           Table "ai.agno_eval_runs"
+          Column          |       Type        | Collation | Nullable | Default 
+--------------------------+-------------------+-----------+----------+---------
+ run_id                   | character varying |           | not null | 
+ eval_type                | character varying |           | not null | 
+ eval_data                | jsonb             |           | not null | 
+ eval_input               | jsonb             |           | not null | 
+ name                     | character varying |           |          | 
+ agent_id                 | character varying |           |          | 
+ team_id                  | character varying |           |          | 
+ workflow_id              | character varying |           |          | 
+ model_id                 | character varying |           |          | 
+ model_provider           | character varying |           |          | 
+ evaluated_component_name | character varying |           |          | 
+ created_at               | bigint            |           | not null | 
+ updated_at               | bigint            |           |          | 
+Indexes:
+    "agno_eval_runs_pkey" PRIMARY KEY, btree (run_id)
+    "idx_agno_eval_runs_created_at" btree (created_at)
+
+ row_count 
+-----------
+         0
+(1 row)
+
+ run_id | eval_type | eval_data | eval_input | name | agent_id | team_id | workflow_id | model_id | model_provider | evaluated_component_name | created_at | updated_at 
+--------+-----------+-----------+------------+------+----------+---------+-------------+----------+----------------+--------------------------+------------+------------
+(0 rows)
+
+----- ai.agno_knowledge -----
+                      Table "ai.agno_knowledge"
+     Column     |       Type        | Collation | Nullable | Default 
+----------------+-------------------+-----------+----------+---------
+ id             | character varying |           | not null | 
+ name           | character varying |           | not null | 
+ description    | text              |           | not null | 
+ metadata       | jsonb             |           |          | 
+ type           | character varying |           |          | 
+ size           | bigint            |           |          | 
+ linked_to      | character varying |           |          | 
+ access_count   | bigint            |           |          | 
+ status         | character varying |           |          | 
+ status_message | text              |           |          | 
+ created_at     | bigint            |           |          | 
+ updated_at     | bigint            |           |          | 
+ external_id    | character varying |           |          | 
+Indexes:
+    "agno_knowledge_pkey" PRIMARY KEY, btree (id)
+
+ row_count 
+-----------
+         0
+(1 row)
+
+ id | name | description | metadata | type | size | linked_to | access_count | status | status_message | created_at | updated_at | external_id 
+----+------+-------------+----------+------+------+-----------+--------------+--------+----------------+------------+------------+-------------
+(0 rows)
+
+----- ai.agno_approvals -----
+                      Table "ai.agno_approvals"
+     Column      |       Type        | Collation | Nullable | Default 
+-----------------+-------------------+-----------+----------+---------
+ id              | character varying |           | not null | 
+ run_id          | character varying |           | not null | 
+ session_id      | character varying |           | not null | 
+ status          | character varying |           | not null | 
+ source_type     | character varying |           | not null | 
+ approval_type   | character varying |           |          | 
+ pause_type      | character varying |           | not null | 
+ tool_name       | character varying |           |          | 
+ tool_args       | jsonb             |           |          | 
+ expires_at      | bigint            |           |          | 
+ agent_id        | character varying |           |          | 
+ team_id         | character varying |           |          | 
+ workflow_id     | character varying |           |          | 
+ user_id         | character varying |           |          | 
+ schedule_id     | character varying |           |          | 
+ schedule_run_id | character varying |           |          | 
+ source_name     | character varying |           |          | 
+ requirements    | jsonb             |           |          | 
+ context         | jsonb             |           |          | 
+ resolution_data | jsonb             |           |          | 
+ resolved_by     | character varying |           |          | 
+ resolved_at     | bigint            |           |          | 
+ created_at      | bigint            |           | not null | 
+ updated_at      | bigint            |           |          | 
+ run_status      | character varying |           |          | 
+Indexes:
+    "agno_approvals_pkey" PRIMARY KEY, btree (id)
+    "idx_agno_approvals_agent_id" btree (agent_id)
+    "idx_agno_approvals_approval_type" btree (approval_type)
+    "idx_agno_approvals_created_at" btree (created_at)
+    "idx_agno_approvals_pause_type" btree (pause_type)
+    "idx_agno_approvals_run_id" btree (run_id)
+    "idx_agno_approvals_run_status" btree (run_status)
+    "idx_agno_approvals_schedule_id" btree (schedule_id)
+    "idx_agno_approvals_schedule_run_id" btree (schedule_run_id)
+    "idx_agno_approvals_session_id" btree (session_id)
+    "idx_agno_approvals_source_type" btree (source_type)
+    "idx_agno_approvals_status" btree (status)
+    "idx_agno_approvals_team_id" btree (team_id)
+    "idx_agno_approvals_user_id" btree (user_id)
+    "idx_agno_approvals_workflow_id" btree (workflow_id)
+
+ row_count 
+-----------
+         0
+(1 row)
+
+ id | run_id | session_id | status | source_type | approval_type | pause_type | tool_name | tool_args | expires_at | agent_id | team_id | workflow_id | user_id | schedule_id | schedule_run_id | source_name | requirements | context | resolution_data | resolved_by | resolved_at | created_at | updated_at | run_status 
+----+--------+------------+--------+-------------+---------------+------------+-----------+-----------+------------+----------+---------+-------------+---------+-------------+-----------------+-------------+--------------+---------+-----------------+-------------+-------------+------------+------------+------------
+(0 rows)
+
