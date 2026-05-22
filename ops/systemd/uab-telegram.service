@@ -1,0 +1,25 @@
+[Unit]
+Description=ultra-agents-brain Telegram adapter
+After=network-online.target uab-brain.service
+Requires=uab-brain.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ultra-agents-brain
+EnvironmentFile=/opt/ultra-agents-brain/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/ultra-agents-brain
+Environment=AGENTOS_BASE_URL=http://127.0.0.1:7000
+ExecStart=/opt/ultra-agents-brain/.venv/bin/python -m channels.telegram_adapter
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uab-telegram
+User=uabrain
+Group=uabrain
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
