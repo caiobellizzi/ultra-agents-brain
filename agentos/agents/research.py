@@ -1,4 +1,4 @@
-"""Research agent — orchestrator-tier multi-source research with ReasoningTools and vault RAG."""
+"""Research agent — research-worker tier multi-source research with ReasoningTools and vault RAG."""
 
 from __future__ import annotations
 
@@ -22,10 +22,10 @@ def make_research_agent(
     knowledge: Knowledge,
     db=db,
 ) -> Agent:
-    """Create a fully-configured research agent (orchestrator tier)."""
+    """Create a fully-configured research agent (research-worker tier)."""
     return Agent(
         name="research",
-        model=chat_model("orchestrator"),
+        model=chat_model("research-worker"),
         # Memory + session summaries (conversational)
         memory_manager=memory_manager,
         enable_agentic_memory=True,
@@ -56,7 +56,7 @@ def make_research_agent(
 research_agent = Agent(
     name="research",
     db=db,
-    model=chat_model("default-worker"),
+    model=chat_model("research-worker"),
     tools=[ReasoningTools(add_instructions=True), research_topic],
     output_schema=ResearchReport,
     description="Plan multi-angle research, summarize each angle, aggregate into a single vault note.",

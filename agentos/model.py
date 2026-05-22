@@ -14,6 +14,7 @@ _TIER_ENV: dict[str, str] = {
     "cheap-worker": "LITELLM_CHEAP_MODEL",
     "default-worker": "LITELLM_DEFAULT_MODEL",
     "orchestrator": "LITELLM_ORCHESTRATOR_MODEL",
+    "research-worker": "LITELLM_RESEARCH_MODEL",
     "private-worker": "LITELLM_PRIVATE_MODEL",
 }
 
@@ -25,6 +26,7 @@ def chat_model(tier: str = "cheap-worker") -> OpenAIChat:
       cheap-worker    — fast/cheap model (env: LITELLM_CHEAP_MODEL)
       default-worker  — balanced capability (env: LITELLM_DEFAULT_MODEL)
       orchestrator    — most capable (env: LITELLM_ORCHESTRATOR_MODEL)
+      research-worker — long-context research (env: LITELLM_RESEARCH_MODEL)
       private-worker  — local LM Studio only (env: LITELLM_PRIVATE_MODEL)
 
     For each named tier the resolved model id is read from the corresponding
