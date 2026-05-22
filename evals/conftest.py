@@ -68,6 +68,6 @@ def judge_model():
 @pytest.fixture(scope="session")
 def eval_db():
     if POSTGRES_DSN_SESSIONS:
-        from agno.storage.postgres import PostgresDb
+        from agno.db.postgres import PostgresDb
         return PostgresDb(db_url=POSTGRES_DSN_SESSIONS, create_schema=True)
     return None
