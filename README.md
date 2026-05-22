@@ -88,7 +88,7 @@ python -m ultra_brain telos-check
 The system has three runtime layers:
 
 - **AgentOS** (`agentos/`) — FastAPI app hosting five Agno agents: `chat`, `ingest`, `query`, `research`, `curator`. Exposes the standard Agno HTTP surface compatible with the hosted dashboard at `https://os.agno.com`.
-- **LiteLLM proxy** — Docker service that routes model calls to Anthropic, OpenAI, Groq, OpenRouter, or a local LM Studio instance.
+- **LiteLLM proxy** — Docker service that routes model calls across a 5-tier matrix: `orchestrator` (NVIDIA NIM DeepSeek V4 Pro → GLM-5.1 → cloud-sonnet), `research-worker` (NIM DeepSeek V4 Flash → Llama 3.1 405B → cloud-sonnet), `default-worker` (local LM Studio Gemma → NIM Llama 3.3 70B → Mistral 2 Large → cloud-groq), `cheap-worker` and `private-worker` (local-only). NIM is treated as cloud-allowed (equivalent privacy posture to Anthropic/Groq); `private-worker` stays strictly local by contract.
 - **Telegram bot / channels** — Calls `POST /agents/{agent_id}/runs` on the AgentOS host. Configured via `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_CHAT_IDS`.
 
 The `ultra_brain/` package provides standalone CLI wrappers and reusable helpers (cost tracking, vault sync, trust checks, Markdown utilities) that the agents and scripts share.
@@ -107,6 +107,8 @@ Key variables:
 | `OPENAI_API_KEY` | — | OpenAI API key |
 | `GROQ_API_KEY` | — | Groq API key |
 | `OPENROUTER_API_KEY` | — | OpenRouter API key |
+| `NVIDIA_NIM_API_KEY` | — | NVIDIA NIM (build.nvidia.com) API key — free 40 RPM/model; required for `orchestrator`, `research-worker`, and `default-worker` NIM fallback aliases |
+| `LITELLM_ORCHESTRATOR_MODEL` / `LITELLM_RESEARCH_MODEL` / `LITELLM_DEFAULT_MODEL` / `LITELLM_CHEAP_MODEL` / `LITELLM_PRIVATE_MODEL` | — | Per-tier LiteLLM alias overrides (default to the tier name itself) |
 | `LM_STUDIO_API_BASE` | — | LM Studio local endpoint |
 | `TELEGRAM_BOT_TOKEN` | — | Telegram bot token for the channel adapter |
 | `TELEGRAM_ALLOWED_CHAT_IDS` | — | Comma-separated list of allowed Telegram chat IDs |
