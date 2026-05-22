@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from .cost import CostLedger
+from .brief import daily_brief
 from .express import daily_digest
 from .ingest import Extractor, Filer
 from .lint import write_lint_report
@@ -56,6 +57,11 @@ def _parser() -> argparse.ArgumentParser:
     monitor_p.add_argument("--score", action="store_true")
 
     sub.add_parser("review")
+
+    daily_b = sub.add_parser("daily-brief")
+    daily_b.add_argument("--date", default=None, help="YYYY-MM-DD override (default: today)")
+    daily_b.add_argument("--no-telegram", action="store_true", help="Skip Telegram delivery")
+    daily_b.add_argument("--model", default=None, help="LLM model alias override")
 
     telos_i = sub.add_parser("telos-interview")
     telos_i.add_argument("--session", type=int, default=None)
@@ -129,6 +135,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "review":
         report = write_weekly_review(vault)
         print(f"Weekly review written to {report}")
+        return 0
+
+    if args.command == "daily-brief":
+        from datetime import date as _date
+        day = _date.fromisoformat(args.date) if args.date else None
+        brief = daily_brief(vault, day=day, llm_model=args.model, send_telegram=not args.no_telegram)
+        print(f"Brief written to {brief}")
         return 0
 
     if args.command == "telos-interview":
