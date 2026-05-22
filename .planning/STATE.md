@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AgentOS Surface Activation
-status: planning
-last_updated: "2026-05-22T18:56:33.261Z"
-last_activity: 2026-05-22
+current_phase: complete (v1.5 milestone done — phases 1–9)
+status: completed
+last_updated: "2026-05-22T19:34:47.716Z"
+last_activity: 2026-05-22 — Milestone v2.0 started
 progress:
   total_phases: 6
   completed_phases: 0
