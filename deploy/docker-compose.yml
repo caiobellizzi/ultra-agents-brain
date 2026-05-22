@@ -10,6 +10,7 @@ services:
     network_mode: host
     volumes:
       - ./litellm/config.yaml:/app/config.yaml:ro
+      - ./litellm/strip_response_format.py:/app/strip_response_format.py:ro
       - litellm-data:/app/data
     restart: unless-stopped
     healthcheck:
