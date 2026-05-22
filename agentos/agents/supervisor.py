@@ -20,6 +20,7 @@ def make_supervisor_team(
     """Create a fully-wired supervisor team accepting a shared MemoryManager."""
     return Team(
         name="supervisor",
+        id="supervisor",
         db=db,
         model=chat_model("orchestrator"),
         members=[ingest_agent, query_agent, research_agent, curator_agent],

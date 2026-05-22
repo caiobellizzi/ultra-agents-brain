@@ -25,6 +25,7 @@ def make_research_agent(
     """Create a fully-configured research agent (research-worker tier)."""
     return Agent(
         name="research",
+        id="research",
         model=chat_model("research-worker"),
         # Memory + session summaries (conversational)
         memory_manager=memory_manager,

@@ -37,6 +37,7 @@ def make_chat_agent(
 
     return Agent(
         name="chat",
+        id="chat",
         model=chat_model("default-worker"),
         # Memory
         memory_manager=memory_manager,

@@ -37,6 +37,7 @@ def make_query_agent(
 
     agent = Agent(
         name="query",
+        id="query",
         model=chat_model("default-worker"),
         # Memory
         memory_manager=memory_manager,

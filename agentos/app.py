@@ -32,7 +32,7 @@ POSTGRES_DSN_SESSIONS = os.getenv("POSTGRES_DSN_SESSIONS")
 
 if POSTGRES_DSN_SESSIONS:
     from agno.db.postgres import PostgresDb
-    db = PostgresDb(db_url=POSTGRES_DSN_SESSIONS, create_schema=True)
+    db = PostgresDb(id="ultra-brain-main", db_url=POSTGRES_DSN_SESSIONS, create_schema=True)
 else:
     # Fallback for local development / testing (no POSTGRES_DSN_SESSIONS set)
     from pathlib import Path
