@@ -1,6 +1,6 @@
 # ultra-agents-brain
 
-**Status:** Active — v1.5 shipped 2026-05-22
+**Status:** Active — v2.0 in planning (v1.5 shipped 2026-05-22)
 **Created:** 2026-05-19
 
 ## What it is
@@ -61,12 +61,23 @@ Vault (/srv/second-brain, Markdown) ←→ AgentOS (FastAPI, Agno, :7000)
 - ✓ 4 STRIDE security mitigations applied (allowlist, callback_data, uabrain user, no hardcoded key) — v1.0
 - ✓ 38-test automated suite green; Nyquist compliant — v1.0
 
-### Active (v2.0+)
+### Active (v2.0 — AgentOS Surface Activation)
+
+- [ ] Memory surface — agent runs trigger memory extraction; os.agno.com Memory tab shows real entries
+- [ ] Evals surface — eval suite writes per-run records; dashboard shows scores
+- [ ] Knowledge surface — vault ingest populates knowledge table; agentic RAG hits visible in UI
+- [ ] Approvals surface — HITL approval events surface in AgentOS approvals UI (not just Telegram)
+- [ ] db_id architecture decision — investigate whether Agno expects per-agent db_ids; isolate vs. shared
+- [ ] Observability — structured logging on each write path (memory, eval, knowledge, approval)
+- [ ] worker.monitor polish — fix daily-brief date mismatch; v1.5 data-pipeline tech debt cleanup
+
+### Deferred to v2.1+
 
 - [ ] Discord adapter using channels/ pattern
 - [ ] WhatsApp adapter using channels/ pattern
 - [ ] Webhook mode for Telegram (replace long-poll)
 - [ ] Vault GitHub remote for bidirectional sync (Mac ↔ VPS via Obsidian-Git + cron)
+- [ ] X/Twitter + LinkedIn ingestion in worker.monitor
 
 ### Out of Scope
 
@@ -95,15 +106,39 @@ All 5 agents now run on Agno 2.6.7 production-grade config: Postgres+pgvector, s
 
 **Tech debt forward:** pre-commit install + real baseline regeneration (Phase 07), CostLedger verification after 1 week of use, VERIFICATION.md backfill for phases 1/2/8/9 (docs only).
 
-## Next Milestone Goals
+## Current Milestone: v2.0 AgentOS Surface Activation
 
-**v2.0 — Channels** (not yet started):
-- Discord adapter using `channels/` pattern
-- WhatsApp adapter using `channels/` pattern
-- Vault GitHub remote sync (Mac ↔ VPS via Obsidian-Git + cron)
-- Optional: Telegram webhook mode (replace long-poll)
+**Goal:** Make the AgentOS UI (os.agno.com) show real data on all 4 feature surfaces — evals, memory, knowledge, approvals — by fixing the upstream write pipelines and resolving the shared-db_id question.
 
-**v3.0 — ultra-workshop** (separate repo, gated): begins after 2–4 weeks of v1.5 production operation.
+**Target features:**
+- Diagnostic spike — trace every write path end-to-end (memory.add, eval.record, knowledge.ingest, approval.create)
+- db_id architecture decision — per-agent isolation vs. shared workspace, based on Agno expectations
+- Memory + Evals + Knowledge + Approvals surfaces all populate with real data after agent runs
+- Observability — structured logging on each write path so future silent failures are detectable
+- worker.monitor polish — daily-brief date mismatch + v1.5 data-pipeline tech debt cleanup
+
+**Scope:** 1-week deep dive. Fixes + worker.monitor polish only — no new ingestion sources (X/Twitter, LinkedIn deferred to v2.1).
+
+**Channels (Discord/WhatsApp/webhook) and vault GitHub sync:** deferred to v2.1.
+
+**v3.0 — ultra-workshop** (separate repo, gated): begins after 2–4 weeks of v1.5+v2.0 production operation.
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 <details>
 <summary>Earlier context (v1.0 shipped 2026-05-19)</summary>
@@ -114,4 +149,4 @@ All 5 agents now run on Agno 2.6.7 production-grade config: Postgres+pgvector, s
 
 ---
 
-*Last updated: 2026-05-22 after v1.5 milestone*
+*Last updated: 2026-05-22 — v2.0 milestone started*

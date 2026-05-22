@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: — Agno Full Reconfiguration
-current_phase: complete (v1.5 milestone done)
-status: complete
-last_updated: "2026-05-22T18:32:00.000Z"
+milestone: v2.0
+milestone_name: AgentOS Surface Activation
+status: planning
+last_updated: "2026-05-22T18:56:33.261Z"
+last_activity: 2026-05-22
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE — ultra-agents-brain
@@ -68,3 +68,10 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 | Eval pre-commit routing (not CI/systemd) | ✓ ≤15s single-agent, ≤90s full suite |
 | EVAL_JUDGE_TIER env-var (default private-worker) | ✓ Free offline judge, override for releases |
 | note_path checked before actions_taken in extract_reply_text | ✓ IngestResult carries both keys; note_path is primary discriminator |
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-22 — Milestone v2.0 started
