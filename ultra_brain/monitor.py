@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ssl
 import sys
 import urllib.parse
 import urllib.request
@@ -63,8 +64,13 @@ def parse_rss(xml_text: str) -> list[FeedItem]:
 
 
 def fetch_feed(url: str, *, timeout: int = 30) -> list[FeedItem]:
+    try:
+        import certifi
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        ssl_ctx = ssl.create_default_context()
     request = urllib.request.Request(url, headers={"User-Agent": "ultra-agents-brain/0.1"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with urllib.request.urlopen(request, timeout=timeout, context=ssl_ctx) as response:
         return parse_rss(response.read().decode("utf-8"))
 
 

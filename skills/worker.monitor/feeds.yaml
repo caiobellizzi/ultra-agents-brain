@@ -1,8 +1,11 @@
-# Placeholder monitor feeds.
+# worker.monitor feed configuration — verified 2026-05-22
 #
-# These examples are intentionally disabled. The production list should be
-# derived from TELOS once `_system/telos.md` and `_system/telos/*.md` exist.
-# Until then, enable feeds manually and keep writes limited to `Inbox/`.
+# Runtime: the Python CLI reads feeds.txt (one URL per line).
+# This file is the human-readable config with metadata, defaults, and notes.
+# Keep feeds.txt and this file in sync.
+#
+# To run manually:
+#   python -m ultra_brain --vault vault monitor --feeds skills/worker.monitor/feeds.txt
 
 defaults:
   poll_interval_hours: 4
@@ -11,37 +14,113 @@ defaults:
   auto_promote: false
   relevance_model_tier: C
   notes:
-    - "TELOS-derived feeds replace these placeholders later."
     - "Deduplicate by canonical_url first, then content_hash."
-    - "Do not route private feeds to cloud models."
+    - "ArXiv feeds are high-volume — max_items_per_feed applies strictly."
+    - "Anthropic has no RSS feed; caught via HN and community signal."
+    - "Reddit LocalLLaMA blocked RSS in 2023; no clean proxy available."
 
 feeds:
-  - name: Example AI Research Blog
-    url: https://example.com/ai-research/rss.xml
-    enabled: false
+  # --- Vendor blogs (primary sources) ---
+  - name: OpenAI Blog
+    url: https://openai.com/blog/rss.xml
+    enabled: true
     topic: ai-research
-    default_tags:
-      - ai
-      - research
-    trust_level: low
-    notes: "Replace with a TELOS-relevant source."
+    default_tags: [openai, ai, llm]
+    trust_level: high
 
-  - name: Example Engineering Updates
-    url: https://example.com/engineering/feed.xml
-    enabled: false
+  - name: HuggingFace Blog
+    url: https://huggingface.co/blog/feed.xml
+    enabled: true
+    topic: ai-research
+    default_tags: [huggingface, models, open-source]
+    trust_level: high
+
+  - name: Google DeepMind Blog
+    url: https://www.deepmind.com/blog/rss.xml
+    enabled: true
+    topic: ai-research
+    default_tags: [deepmind, google, research]
+    trust_level: high
+
+  - name: Google AI Blog
+    url: https://blog.google/technology/ai/rss/
+    enabled: true
+    topic: ai-research
+    default_tags: [google, gemini, ai]
+    trust_level: high
+
+  # --- Researcher blogs ---
+  - name: Andrej Karpathy
+    url: https://karpathy.github.io/feed.xml
+    enabled: true
+    topic: ai-research
+    default_tags: [karpathy, llm, education]
+    trust_level: high
+    notes: "Posts infrequently but extremely high signal."
+
+  - name: Lilian Weng (OpenAI)
+    url: https://lilianweng.github.io/index.xml
+    enabled: true
+    topic: ai-research
+    default_tags: [lilian-weng, research, deep-dives]
+    trust_level: high
+
+  - name: Simon Willison
+    url: https://simonwillison.net/atom/everything/
+    enabled: true
+    topic: ai-tooling
+    default_tags: [simon-willison, llm-tools, practical]
+    trust_level: high
+    max_items_per_feed: 3
+    notes: "High-volume blog — capped at 3 to avoid flooding Inbox."
+
+  # --- Newsletters ---
+  - name: Import AI (Jack Clark)
+    url: https://importai.substack.com/feed
+    enabled: true
+    topic: ai-research
+    default_tags: [import-ai, weekly, policy-safety]
+    trust_level: high
+    notes: "Weekly. Ex-OpenAI policy lead. High signal on safety + frontier models."
+
+  # --- ArXiv ---
+  - name: ArXiv cs.LG (Machine Learning)
+    url: https://arxiv.org/rss/cs.LG
+    enabled: true
+    topic: ai-research
+    default_tags: [arxiv, machine-learning, papers]
+    trust_level: medium
+    max_items_per_feed: 5
+
+  - name: ArXiv cs.AI (Artificial Intelligence)
+    url: https://arxiv.org/rss/cs.AI
+    enabled: true
+    topic: ai-research
+    default_tags: [arxiv, ai, papers]
+    trust_level: medium
+    max_items_per_feed: 5
+
+  - name: ArXiv cs.CL (Computation & Language / NLP)
+    url: https://arxiv.org/rss/cs.CL
+    enabled: true
+    topic: ai-research
+    default_tags: [arxiv, nlp, llm, papers]
+    trust_level: medium
+    max_items_per_feed: 5
+
+  # --- Community ---
+  - name: Hacker News
+    url: https://news.ycombinator.com/rss
+    enabled: true
     topic: engineering-knowledge
-    default_tags:
-      - engineering
-      - tooling
-    trust_level: low
-    notes: "Use only after confirming signal quality."
+    default_tags: [hn, community, tooling]
+    trust_level: medium
+    max_items_per_feed: 10
+    notes: "Front-page only. Catches Anthropic/AI announcements with no official RSS."
 
-  - name: Example Personal Knowledge Management
-    url: https://example.com/pkm/rss.xml
-    enabled: false
-    topic: second-brain
-    default_tags:
-      - pkm
-      - second-brain
-    trust_level: low
-    notes: "Placeholder for TELOS-aligned knowledge management sources."
+  # --- Pending / no clean solution ---
+  # Anthropic — no RSS feed exists as of 2026-05-22
+  # Reddit r/LocalLLaMA — blocked RSS for anonymous users since 2023
+  # Meta AI blog — no targeted AI RSS (about.fb.com/news is too broad)
+  # X/Twitter — skipped for now; revisit twikit after 2 weeks if signal is missing
+  # Bluesky — polled via API (separate config, not RSS)

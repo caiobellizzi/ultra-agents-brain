@@ -1,0 +1,27 @@
+# worker.monitor RSS feeds — verified 2026-05-22
+# Format: one URL per line, comments with #
+# Run: python -m ultra_brain --vault vault monitor --feeds skills/worker.monitor/feeds.txt
+
+# --- Vendor blogs (primary sources) ---
+https://openai.com/blog/rss.xml
+https://huggingface.co/blog/feed.xml
+https://www.deepmind.com/blog/rss.xml
+https://blog.google/technology/ai/rss/
+
+# NOTE: Anthropic has no RSS feed. Caught via HN + community signal below.
+
+# --- Researcher blogs (high signal) ---
+https://karpathy.github.io/feed.xml
+https://lilianweng.github.io/index.xml
+https://simonwillison.net/atom/everything/
+
+# --- Newsletters (primary-source quality only) ---
+https://importai.substack.com/feed
+
+# --- ArXiv (5 items/day per feed, set in feeds.yaml) ---
+https://arxiv.org/rss/cs.LG
+https://arxiv.org/rss/cs.AI
+https://arxiv.org/rss/cs.CL
+
+# --- Community (HN only — Reddit blocked RSS) ---
+https://news.ycombinator.com/rss
