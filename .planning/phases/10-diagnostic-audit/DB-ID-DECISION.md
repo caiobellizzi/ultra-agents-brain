@@ -101,10 +101,15 @@ Option A is a registration-model decision. It does **not** resolve any of:
 
 ### Phase 11 (Memory activation)
 
-- The 5 agents already pass `enable_agentic_memory=True` + `update_memory_on_run=True` (see `evidence/write-gate-grep.txt`). Memory writes are wired and exercised — `ai.agno_memories` has 1 row.
-- Phase 11's job is **not** to flip `enable_user_memories=True` (that flag is for an older Agno API; the project uses `enable_agentic_memory` instead).
-- Add `id="ultra-brain-main"` to the `PostgresDb` constructor in `agentos/app.py`. No agent factory signature change.
-- Verify phase 11 success by re-running `GET /memories` and confirming the response now includes a non-UUID-shaped `db_id` from the dashboard's perspective.
+**Amended 2026-05-22** — supersedes the earlier note that claimed phase 11's flag-flip was already done.
+
+- All 6 agents pass `enable_agentic_memory=True` + `update_memory_on_run=True` (see `evidence/write-gate-grep.txt`). That is a **different** Agno mechanism from auto-extraction — it gives the agent a tool, but the agent has to *choose* to call it.
+- The auto-extraction path (`enable_user_memories=True`, with an attached `MemoryManager` and a stable `user_id` per run) is **not** enabled — `grep -rn "enable_user_memories" agentos/` returns zero matches. The 1 row that exists in `ai.agno_memories` has `agent_id=null`, strongly indicating it was created via the UI "+ CREATE MEMORY" button or an explicit `db.upsert_user_memory()` call, not via an agent run.
+- Phase 11's primary work is therefore to **enable `enable_user_memories=True`** on the agents whose conversations should leave a memory trace — most likely the Telegram-facing brief/chat agents (the ones with a stable per-user identity). The supervisor/curator/ingest agents may not need it.
+- Phase 11's secondary work (precondition `DIAG-BL-01`): add `id="ultra-brain-main"` to the `PostgresDb` constructor in `agentos/app.py`. No agent factory signature change.
+- Verify phase 11 success by:
+  (a) running a real chat-agent conversation with memory-worthy content under a stable `user_id`, then querying `/memories` within 5 s (per ROADMAP success criterion 1) and confirming a new row appears with `agent_id` populated (proving the auto-extraction path fired, not just a manual UI add);
+  (b) confirming `/config` reports `os_database="ultra-brain-main"` after redeploy.
 
 ### Phase 12 (Evals activation)
 

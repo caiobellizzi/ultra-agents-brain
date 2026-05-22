@@ -10,7 +10,7 @@
 
 | Surface | Write fn (Agno src) | DB table | Row count | API status | UI shows? | Root-cause tag |
 |---|---|---|---|---|---|---|
-| memory | `PostgresDb.upsert_user_memory()` @ `agno/db/postgres/postgres.py:1653` (also async @ `async_postgres.py:1532`); contract @ `agno/db/base.py:264` | `ai.agno_memories` (agno_sessions DB) | **1** | `GET /memories` → 200, 1 item | **Yes (operator-confirmed)** — dashboard renders the workshop-user row | **RC-memory-thin-usage** *(working but only one user has interacted)* |
+| memory | `PostgresDb.upsert_user_memory()` @ `agno/db/postgres/postgres.py:1653` (also async @ `async_postgres.py:1532`); contract @ `agno/db/base.py:264` | `ai.agno_memories` (agno_sessions DB) | **1** *(manual seed; `agent_id=null`)* | `GET /memories` → 200, 1 item | **Yes (operator-confirmed)** — dashboard renders the seed row | **RC-memory-wrong-path-wired** *(auto-extraction path `enable_user_memories=True` not enabled; agentic-memory tool exists but agents haven't been triggered to use it — see Section 5 below)* |
 | evals  | `PostgresDb.create_eval_run()` @ `agno/db/postgres/postgres.py:2196` (also async @ `async_postgres.py:2001`) | `ai.agno_eval_runs` | **0** | `GET /eval-runs` → 200, empty | **No (operator-confirmed)** — empty state | **RC-no-eval-harness** *(no agent run has ever invoked `db.create_eval_run`)* |
 | knowledge | `PostgresDb.upsert_knowledge_content()` @ `agno/db/postgres/postgres.py:2108` (also async @ `async_postgres.py:1912`) | `ai.agno_knowledge` (in agno_sessions DB); separate Postgres DB `agno_knowledge` is empty | **0** in `ai.agno_knowledge`; **0 tables** in the `agno_knowledge` DB itself | `GET /knowledge/content` → **400** (`Available IDs: []`); with the registered `db_id` → **404** (`Knowledge instance with db_id '…' not found`) | **No (operator-confirmed)** — empty / error state | **RC-knowledge-not-registered** *(POSTGRES_DSN_KNOWLEDGE is wired but no `Knowledge` instance is registered with AgentOS — see Section 3 below)* |
 | approval | `PostgresDb.create_approval()` @ `agno/db/postgres/postgres.py:4813` (router @ `agno/os/routers/approvals/router.py:19` — uses `os_db` only, does **not** accept `db_id`) | `ai.agno_approvals` | **0** | `GET /approvals` → 200, empty | **No (operator-confirmed)** — empty state | **RC-no-hitl-trigger-yet** *(3 vault tools + ingest tool decorated with `requires_confirmation=True`, but no agent run has invoked them in production yet — table is empty rather than gated)* |
@@ -76,7 +76,17 @@ pg_stat (Appendix A): `agno_memories` n_tup_ins=1, n_tup_upd=1, n_tup_del=0 — 
 
 ### Section 5 — Root-cause hypothesis
 
-**Primary tag: `RC-memory-thin-usage`.** The memory surface is functionally correct (Sections 1–3 prove: gating enabled on all 5 agents, write path exercised, API returns the row). The single row reflects production traffic: only the `workshop` user has interacted with the brain enough to trigger `update_memory_on_run`. Phases 11–14 should treat this as a working surface — any "missing memory" UX issue is a **usage signal**, not a wiring bug. (No secondary tag.)
+**Primary tag: `RC-memory-wrong-path-wired` *(amended 2026-05-22 after screenshot correction — see note below)*.** Two Agno memory paths exist:
+
+1. **Automatic LLM-driven extraction** — set `enable_user_memories=True` on the `Agent` (with an attached `MemoryManager`). After each run, Agno extracts durable facts from the conversation and writes rows keyed by `user_id`. **This path is NOT enabled in our stack** — `grep -rn "enable_user_memories" agentos/` returns ZERO matches.
+2. **Explicit writes** — `db.upsert_user_memory(...)` calls or the UI "+ CREATE MEMORY" button. The UI button writes via the AgentOS REST API.
+3. **Agentic memory** *(third path, partially active)* — `enable_agentic_memory=True` (set on all 6 agent factories) gives the agent a tool to optionally call memory ops *during* a run. This is **not the same** as auto-extraction; the agent must decide to call the tool.
+
+The single row in `ai.agno_memories` has `agent_id=null` and `team_id=null` — strongly suggesting it was created via the UI "+ CREATE MEMORY" button or an explicit `db.upsert_user_memory()` call, **not** via an agent run. An agent-run-generated memory would have `agent_id` populated.
+
+To populate the Memory tab for real, phase 11 must enable `enable_user_memories=True` (with the existing `MemoryManager` and a stable `user_id`) on the agents whose conversations should leave a trace — most likely the Telegram-facing brief/chat agents, since those are the ones with a stable per-user identity. Without that flag, runs will continue to leave `agno_memories` at 1 row (the manual seed) indefinitely.
+
+> Amendment note: an earlier version of this section recorded `RC-memory-thin-usage` as the primary tag, conflating `enable_agentic_memory` with `enable_user_memories`. The two are different Agno mechanisms. The reframing above is the correct root cause and supersedes the previous tag.
 
 ---
 
