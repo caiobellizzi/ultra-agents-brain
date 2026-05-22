@@ -18,12 +18,13 @@ from agentos.tools.vault import lint_vault, poll_feeds, run_digest, run_review
 def make_curator_agent(memory_manager: MemoryManager, db=db) -> Agent:
     return Agent(
         name="curator",
+        id="curator",
         db=db,
         model=chat_model("cheap-worker"),
         # Memory
         memory_manager=memory_manager,
         enable_agentic_memory=True,
-        update_memory_on_run=True,
+        update_memory_on_run=False,  # phase 11 D-06: background/bulk agents don't auto-extract memory
         add_history_to_context=True,
         # NO session summaries — one-shot bulk agent
         # NO knowledge= — writes TO vault, not reads
