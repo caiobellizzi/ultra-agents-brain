@@ -1,0 +1,20 @@
+[Unit]
+Description=ultra-agents-brain Telegram command bot
+After=network-online.target uab-brain.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ultra-agents-brain
+EnvironmentFile=/opt/ultra-agents-brain/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/ultra-agents-brain
+Environment=UAB_PROJECT_ROOT=/opt/ultra-agents-brain
+Environment=UAB_VAULT=/srv/second-brain
+ExecStart=/opt/ultra-agents-brain/.venv/bin/python -m ultra_brain.telegram_bot
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
