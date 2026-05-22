@@ -28,9 +28,21 @@ Research agent now consumes a dedicated `research-worker` tier.
 | `python3 -c 'yaml.safe_load(...)'` on config.yaml | ✅ parses |
 | `docker compose -f deploy/docker-compose.yml config` | ✅ renders cleanly |
 | `pytest evals/` | ✅ 48/48 passed in 0.02s (local-stub baselines unchanged) |
-| Live curl against 6 NIM aliases | ⏭ deferred — local env has no `NVIDIA_NIM_API_KEY` set; must be exercised on VPS after deploy |
+| Live curl against 6 NIM aliases | ✅ all 200 on VPS (deploy-litellm-1, 2026-05-22). Required 3 model-ID corrections vs PLAN.md — see below |
 | Supervisor smoke test on VPS `:7000/teams/supervisor/runs` | ⏭ deferred — requires VPS deploy + NIM key |
 | Manual `NVIDIA_NIM_API_KEY` invalidation → cloud-sonnet failover | ⏭ deferred — same |
+
+## Model-ID corrections vs PLAN.md
+
+Smoke-tested against `https://integrate.api.nvidia.com/v1/models` on the user's NIM key:
+
+| PLAN.md ID | Status | Final ID in config.yaml |
+|---|---|---|
+| `z-ai/glm5.1` | typo — missing hyphen | `z-ai/glm-5.1` |
+| `meta/llama-3.1-405b-instruct` | not in NIM catalog | `qwen/qwen3.5-397b-a17b` (largest MoE; comparable role) |
+| `mistralai/mistral-2-large-instruct` | word-order typo | tried `mistral-large-2-instruct` (404 account-restricted), `mistral-large` (404), `mistral-nemotron` (DEGRADED) — **final: `openai/gpt-oss-120b`** for dual-vendor FC fallback |
+
+`deepseek-ai/deepseek-v4-pro`, `deepseek-ai/deepseek-v4-flash`, and `meta/llama-3.3-70b-instruct` were correct as written.
 
 ## Deferred / follow-up
 
