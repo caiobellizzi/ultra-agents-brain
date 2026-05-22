@@ -108,6 +108,7 @@ Key variables:
 | `GROQ_API_KEY` | — | Groq API key |
 | `OPENROUTER_API_KEY` | — | OpenRouter API key |
 | `NVIDIA_NIM_API_KEY` | — | NVIDIA NIM (build.nvidia.com) API key — free 40 RPM/model; required for `orchestrator`, `research-worker`, and `default-worker` NIM fallback aliases |
+| `XAI_API_KEY` | — | xAI Grok (api.x.ai) API key — placeholder; requires paid credits before any `xai/grok-*` alias can be added to LiteLLM config |
 | `LITELLM_ORCHESTRATOR_MODEL` / `LITELLM_RESEARCH_MODEL` / `LITELLM_DEFAULT_MODEL` / `LITELLM_CHEAP_MODEL` / `LITELLM_PRIVATE_MODEL` | — | Per-tier LiteLLM alias overrides (default to the tier name itself) |
 | `LM_STUDIO_API_BASE` | — | LM Studio local endpoint |
 | `TELEGRAM_BOT_TOKEN` | — | Telegram bot token for the channel adapter |
