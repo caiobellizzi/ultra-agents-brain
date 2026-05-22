@@ -27,6 +27,7 @@ Postgres/pgvector, per-user semantic memory, agentic RAG over vault, ReasoningTo
 - [x] Phase 5: wave-3-agentos — AgentOS surface: PostgresDb, MemoryManager, MCP, A2A (1 plan) (completed 2026-05-20)
 - [ ] Phase 6: wave-4-adapter — Telegram adapter typed responses + vault reindex (1 plan)
 - [x] Phase 7: wave-5-evals — Evals scaffolding, coverage, and baselines (3 plans) (completed 2026-05-21)
+- [x] Phase 8: litellm-nim-routing — NVIDIA NIM via LiteLLM + per-agent model routing (1 plan) (completed 2026-05-22)
 
 ### 📋 v2.0 — Channels (Planned)
 
@@ -47,3 +48,4 @@ Separate repo. Agno orchestrator + OpenHands coder sandbox. Reads from Brain via
 | 5. wave-3-agentos | v1.5 | 1/1 | Complete   | 2026-05-20 |
 | 6. wave-4-adapter | v1.5 | 0/1 | Planned    |  |
 | 7. wave-5-evals | v1.5 | 3/3 | Complete   | 2026-05-21 |
+| 8. litellm-nim-routing | v1.5 | 0/1 | Planned    |  |
