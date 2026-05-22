@@ -42,8 +42,8 @@ else:
     db = SqliteDb(db_file=str(_DB_PATH))
 
 # --- Shared MemoryManager (one instance, all agents share it) ---
-from agno.memory.manager import MemoryManager
-memory = MemoryManager(
+from agentos.instrumented_memory import InstrumentedMemoryManager
+memory = InstrumentedMemoryManager(
     db=db,
     model=chat_model("cheap-worker"),
 )
