@@ -16,8 +16,8 @@ RestartSec=5
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=uab-telegram
-User=uabrain
-Group=uabrain
+User=root
+Group=root
 NoNewPrivileges=true
 PrivateTmp=true
 
