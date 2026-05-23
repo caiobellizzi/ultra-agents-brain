@@ -389,9 +389,16 @@ async def handle_callback(
         log.warning("callback_data contains invalid run_id %r — ignoring", run_id)
         return
 
+    # TOCTOU guard: claim the run_id BEFORE issuing the POST, not after.
+    # If two callbacks race past this point both would otherwise POST the
+    # /continue endpoint and the second one trips Agno's 409 "run is already
+    # continued". Marking first closes the race window. If the POST below
+    # fails we accept that we won't retry — the alternative is double-approval
+    # which is strictly worse.
     if run_id in _RESOLVED_RUNS:
         log.debug("Ignoring duplicate callback for already-resolved run %s", run_id)
         return
+    _RESOLVED_RUNS.add(run_id)
     confirmed = action == "approve"
 
     # Resume the run via Agno's native /runs/{run_id}/continue endpoint.
@@ -435,12 +442,21 @@ async def handle_callback(
         await send_message(client, chat_id, "Network error resuming run.")
         return
 
-    if r.status_code not in (200, 201):
-        log.warning("Continue returned %s: %s", r.status_code, r.text[:200])
-        await send_message(client, chat_id, f"AgentOS error resuming run: {r.status_code}")
+    # 409 "run is already continued" means a prior callback (e.g. the user's
+    # first tap) already resumed this run. The action did succeed; this
+    # callback is just the duplicate. Stay silent — user-facing error would
+    # contradict the earlier "approved" reply we already sent.
+    if r.status_code == 409 and "already continued" in r.text:
+        log.info("Continue 409 (already continued) — duplicate callback for run %s ignored", run_id)
         return
 
-    _RESOLVED_RUNS.add(run_id)
+    if r.status_code not in (200, 201):
+        log.warning("Continue returned %s: %s", r.status_code, r.text[:200])
+        # POST failed for a non-duplicate reason — release the resolved-marker
+        # so the user can retry by tapping the button again.
+        _RESOLVED_RUNS.discard(run_id)
+        await send_message(client, chat_id, f"AgentOS error resuming run: {r.status_code}")
+        return
 
     if not confirmed:
         await send_message(client, chat_id, "Action denied.")
@@ -448,6 +464,16 @@ async def handle_callback(
 
     payload = r.json()
     reply = extract_reply_text(payload)
+    if not reply or reply in ("{}", "None", "[]"):
+        # Defensive fallback: continue endpoint sometimes returns the run
+        # mid-flight with an empty output. Surface the tool result we can
+        # find on the run instead of a literal "{}".
+        log.warning("continue payload had empty reply; keys=%s", list(payload.keys()))
+        tool_results = []
+        for t in payload.get("tools", []) or []:
+            if t.get("tool_call_id") == tool_call_id and t.get("result"):
+                tool_results.append(str(t["result"]))
+        reply = "\n".join(tool_results) if tool_results else "Approved — action completed (no reply text)."
     await send_message(client, chat_id, reply)
 
 

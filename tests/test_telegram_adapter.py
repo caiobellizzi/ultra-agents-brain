@@ -219,6 +219,108 @@ class TestCallbackDataValidation(unittest.TestCase):
         self.assertTrue(len(shape_warnings) > 0, f"Expected shape warning, got: {warnings}")
 
 
+class TestApproveDoubleTap(unittest.TestCase):
+    """Regression — duplicate Approve callbacks must only POST once and must
+    not surface AgentOS 409 'already continued' to the user."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = _import_adapter_with_env()
+
+    def setUp(self):
+        # Clear module-level state between tests
+        self.mod._RESOLVED_RUNS.clear()
+        self.mod._PAUSED_TOOLS.clear()
+
+    def _query(self, run_id: str, action: str = "approve") -> dict:
+        tool_call_id = "abcdef01-abcd-abcd-abcd-abcdef012345"
+        return {
+            "id": "cq-dup",
+            "message": {"chat": {"id": 999}},
+            "from": {"id": 999},
+            "data": f"{action}:{run_id}:ingest:{tool_call_id}",
+        }
+
+    def test_second_callback_skips_post_entirely(self):
+        """First callback POSTs; second is silently dropped by _RESOLVED_RUNS guard."""
+        import asyncio
+
+        run_id = "11111111-2222-3333-4444-555555555555"
+        client = AsyncMock()
+        client.post = AsyncMock(return_value=MagicMock(
+            status_code=200, json=lambda: {"content": "ok"}, text=""
+        ))
+
+        asyncio.run(self.mod.handle_callback(client, self._query(run_id)))
+        asyncio.run(self.mod.handle_callback(client, self._query(run_id)))
+
+        continue_calls = [c for c in client.post.call_args_list if "continue" in str(c)]
+        self.assertEqual(len(continue_calls), 1, "Second callback must not POST /continue again")
+        self.assertIn(run_id, self.mod._RESOLVED_RUNS)
+
+    def test_409_already_continued_is_swallowed(self):
+        """If the POST itself returns 409 'already continued' (race won by another callback),
+        the user must NOT see an 'AgentOS error resuming run' message."""
+        import asyncio
+
+        run_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        # 1st call to client.post = answerCallbackQuery (200)
+        # 2nd call = /continue (409 with "already continued" body)
+        client = AsyncMock()
+
+        async def _post(url, *args, **kwargs):
+            if "continue" in url:
+                return MagicMock(
+                    status_code=409,
+                    text='{"detail":"run is already continued"}',
+                    json=lambda: {"detail": "run is already continued"},
+                )
+            return MagicMock(status_code=200, json=lambda: {})
+
+        client.post = AsyncMock(side_effect=_post)
+
+        # Capture send_message calls — must not include an "error resuming" line
+        sent: list[str] = []
+        original_send = self.mod.send_message
+
+        async def fake_send(c, chat_id, text):
+            sent.append(text)
+
+        self.mod.send_message = fake_send
+        try:
+            asyncio.run(self.mod.handle_callback(client, self._query(run_id)))
+        finally:
+            self.mod.send_message = original_send
+
+        error_msgs = [m for m in sent if "error resuming" in m.lower()]
+        self.assertEqual(error_msgs, [], f"409 'already continued' should be silent; got: {sent}")
+
+    def test_non_409_error_releases_resolved_marker_for_retry(self):
+        """If /continue fails with a real (non-409) error, the run_id must be
+        removed from _RESOLVED_RUNS so the user can tap again to retry."""
+        import asyncio
+
+        run_id = "99999999-8888-7777-6666-555555555555"
+        client = AsyncMock()
+
+        async def _post(url, *args, **kwargs):
+            if "continue" in url:
+                return MagicMock(status_code=500, text="boom", json=lambda: {})
+            return MagicMock(status_code=200, json=lambda: {})
+
+        client.post = AsyncMock(side_effect=_post)
+
+        original_send = self.mod.send_message
+        self.mod.send_message = AsyncMock()
+        try:
+            asyncio.run(self.mod.handle_callback(client, self._query(run_id)))
+        finally:
+            self.mod.send_message = original_send
+
+        self.assertNotIn(run_id, self.mod._RESOLVED_RUNS,
+                          "Non-409 errors must release the marker so retry works")
+
+
 class TestExtractReplyText(unittest.TestCase):
     """Tests for extract_reply_text() and format_citations() typed response extraction."""
 
