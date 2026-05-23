@@ -452,7 +452,13 @@ async def main() -> None:
 
     offset = 0
 
-    async with httpx.AsyncClient(timeout=POLL_TIMEOUT + 5) as client:
+    # Phase 11-02 D-09: explicit timeout shape. read=90 accommodates supervisor
+    # + chat agent runs (10-30s typical, up to 60s with vault citations). The
+    # getUpdates long-poll below overrides this with its own `timeout=POLL_TIMEOUT`
+    # arg, so this doesn't shorten the long-poll budget.
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(connect=10.0, read=90.0, write=10.0, pool=90.0)
+    ) as client:
         while True:
             try:
                 result = await tg_get(

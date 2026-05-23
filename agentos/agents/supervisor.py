@@ -55,7 +55,7 @@ def make_supervisor_team(
         num_past_sessions_to_search=3,
         add_team_history_to_members=True,
         share_member_interactions=True,
-        reasoning=True,
+        reasoning=False,  # phase 11-02: Agno manual-CoT loop hangs with LiteLLM-proxied thinking models (NIM DeepSeek). Orchestrator still reasons internally; we just stop trying to layer Agno's manual CoT on top.
     )
 
 
