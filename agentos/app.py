@@ -17,7 +17,7 @@ load_dotenv()
 
 from agno.os.app import AgentOS
 
-from agentos.knowledge import VaultKnowledge
+from agentos.knowledge import make_knowledge
 from agentos.model import chat_model
 from agentos.agents.chat import make_chat_agent
 from agentos.agents.curator import make_curator_agent
@@ -48,12 +48,10 @@ memory = InstrumentedMemoryManager(
     model=chat_model("cheap-worker"),
 )
 
-# --- Knowledge base (PgVector RAG, loaded once at startup) ---
-# VaultKnowledge guards make_knowledge() — only creates PgVector when
-# POSTGRES_DSN_KNOWLEDGE is set; falls back to an empty Knowledge otherwise.
-vault = VaultKnowledge()
-vault.load()  # one-shot startup load; incremental updates from curator
-kb = vault.knowledge  # the real Knowledge (or empty stub in dev/test)
+# --- Knowledge base (PgVector RAG, wired with contents_db for AgentOS routes) ---
+# make_knowledge() returns a Knowledge with name='ultra-brain-vault', vector_db,
+# and contents_db=POSTGRES_DB. Stub fallback (no DSN) emits a WARNING log.
+kb = make_knowledge()
 
 # --- Agent factory calls (all receive memory + knowledge) ---
 chat_agent = make_chat_agent(memory_manager=memory, knowledge=kb, db=db)

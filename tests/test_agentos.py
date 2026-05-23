@@ -23,37 +23,36 @@ os.environ.setdefault("LITELLM_MASTER_KEY", "test-key-for-tests")
 
 
 class TestKnowledgeImportable(unittest.TestCase):
-    """W2.2 — agentos/knowledge.py importable and kb.load() runs without error."""
+    """W2.2 — agentos/knowledge.py importable; make_knowledge() returns a Knowledge."""
 
     def test_knowledge_importable(self) -> None:
-        from agentos.knowledge import VaultKnowledge, kb
+        from agno.knowledge.knowledge import Knowledge
 
-        self.assertIsNotNone(kb)
-        self.assertIsInstance(kb, VaultKnowledge)
+        from agentos.knowledge import make_knowledge
 
-    def test_kb_load_returns_list_without_error(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            from agentos.knowledge import VaultKnowledge
+        kb = make_knowledge()
+        self.assertIsInstance(kb, Knowledge)
+        # stub-fallback path (no DSN in unit tests) — name still set
+        self.assertEqual(kb.name, "ultra-brain-vault")
 
-            kb = VaultKnowledge(vault_path=Path(tmp) / "vault")
-            files = kb.load()
-            # load() must return a list (possibly empty) without raising
-            self.assertIsInstance(files, list)
+    def test_reindex_summary_dataclass_shape(self) -> None:
+        from agentos.knowledge import ReindexSummary
 
-    def test_kb_load_finds_markdown_files(self) -> None:
+        s = ReindexSummary(indexed=0, skipped=0, errors=0, total=0, duration_seconds=0.0)
+        self.assertEqual(s.total, 0)
+
+    def test_reindex_returns_empty_on_stub_fallback(self) -> None:
+        from agentos.knowledge import make_knowledge, reindex
+
         with tempfile.TemporaryDirectory() as tmp:
             vault = Path(tmp) / "vault"
             vault.mkdir()
-            (vault / "note.md").write_text("# Test\n\nContent.", encoding="utf-8")
-            (vault / "subdir").mkdir()
-            (vault / "subdir" / "nested.md").write_text("# Nested\n", encoding="utf-8")
-
-            from agentos.knowledge import VaultKnowledge
-
-            kb = VaultKnowledge(vault_path=vault)
-            files = kb.load()
-            self.assertEqual(len(files), 2)
-            self.assertEqual(kb.file_count, 2)
+            (vault / "note.md").write_text("# Test\n", encoding="utf-8")
+            kb = make_knowledge()  # stub (no DSN)
+            summary = reindex(vault_path=vault, knowledge=kb)
+            # stub fallback path: nothing is indexed, summary is zeros
+            self.assertEqual(summary.indexed, 0)
+            self.assertEqual(summary.total, 0)
 
 
 class TestVaultToolsCallable(unittest.TestCase):
