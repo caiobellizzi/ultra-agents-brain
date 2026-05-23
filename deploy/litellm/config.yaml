@@ -17,7 +17,7 @@ model_list:
   # Tier A — orchestrator: NIM DeepSeek V4 Pro (reasoning model, thinking on)
   - model_name: orchestrator
     litellm_params:
-      model: nvidia_nim/deepseek-ai/deepseek-v4-pro
+      model: nvidia_nim/deepseek-ai/deepseek-v4-flash
       api_key: os.environ/NVIDIA_NIM_API_KEY
       timeout: 300
       max_retries: 1
@@ -30,13 +30,10 @@ model_list:
 
   - model_name: orchestrator-failover
     litellm_params:
-      model: nvidia_nim/z-ai/glm-5.1
+      model: nvidia_nim/qwen/qwen3.5-397b-a17b
       api_key: os.environ/NVIDIA_NIM_API_KEY
       timeout: 300
       max_retries: 1
-      extra_body:
-        chat_template_kwargs:
-          thinking: true
     model_info:
       mode: chat
       supports_response_schema: false
@@ -155,6 +152,7 @@ litellm_settings:
     - default-worker: ["default-worker-nim", "default-worker-nim-failover", "cloud-groq"]
     - default-worker-nim: ["default-worker-nim-failover", "cloud-groq"]
     - default-worker-nim-failover: ["cloud-groq"]
+    - private-worker: ["cheap-worker", "default-worker-nim", "cloud-groq"]
   context_window_fallbacks:
     - default-worker: ["research-worker"]
     - orchestrator: ["research-worker"]
