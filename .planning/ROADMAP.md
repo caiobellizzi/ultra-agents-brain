@@ -20,8 +20,8 @@
 |----|----------------------------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------|----------|
 | 10 | Diagnostic Audit                       | Trace every write path; decide db_id model                                                 | DIAG-01, DIAG-02                              | 3        |
 | 11 | Memory Surface Activation              | Memory tab in os.agno.com shows entries after agent runs                                   | MEM-01, MEM-02, MEM-03, OBS-01 (memory path)  | 4        |
-| 12 | Evals Surface Activation               | Run-level + suite-level eval scores visible in Evals dashboard                             | EVAL-01, EVAL-02, EVAL-03, OBS-01 (eval path) | 4        |
-| 13 | Knowledge Surface Activation           | Vault indexed; agentic RAG hits visible in Knowledge tab                                   | KNOW-01, KNOW-02, KNOW-03, OBS-01 (know path) | 4        |
+| 12 | Evals Surface Activation               | 3/3 | Complete   | 2026-05-23 |
+| 13 | Knowledge Surface Activation           | 2/3 | In Progress|  |
 | 14 | Approvals Surface Activation           | Telegram HITL events surface in Approvals UI with state updates                            | APPR-01, APPR-02, APPR-03, OBS-01 (appr path) | 4        |
 | 15 | worker.monitor Polish + Final Verify   | Daily-brief date bug fixed; vault-sync delete bug fixed; surface-smoke verification doc    | MON-01, MON-02, OBS-02                        | 4        |
 
@@ -70,17 +70,19 @@
 
 ---
 
-### Phase 13: Knowledge Surface Activation
+### Phase 13: Knowledge Surface Activation ✅ COMPLETE (2026-05-23)
 
 **Goal:** Ensure vault content is indexed into the knowledge table and agentic RAG hits are recorded.
 
-**Requirements:** KNOW-01, KNOW-02, KNOW-03, OBS-01 (knowledge path)
+**Requirements:** KNOW-01, KNOW-02, KNOW-03, OBS-01 (knowledge path) — all verified.
 
 **Success criteria:**
-1. Vault `.md` content appears in the AgentOS Knowledge tab; row counts in pgvector match expected document count.
-2. An agentic RAG query during an agent run records a knowledge-access event visible in the UI.
-3. Running the vault reindex entry point twice produces no duplicate rows (idempotency verified by row count).
-4. Knowledge write/access paths emit structured log lines.
+1. ✅ Vault `.md` content appears in the AgentOS Knowledge tab; row counts in pgvector match expected document count. *(125 files → 125 ai.agno_knowledge rows, 136 ai.vault chunks)*
+2. ✅ An agentic RAG query during an agent run records a knowledge-access event visible in the UI. *(10 hits bumped access_count 0→1)*
+3. ✅ Running the vault reindex entry point twice produces no duplicate rows. *(BEFORE=136, AFTER=136; sha256-skip working)*
+4. ✅ Knowledge write/access paths emit structured log lines. *(125 OBS-01 index lines + OBS-01 search lines on every search call)*
+
+See `phases/13-knowledge-surface-activation/13-VERIFICATION.md` for full evidence.
 
 ---
 
