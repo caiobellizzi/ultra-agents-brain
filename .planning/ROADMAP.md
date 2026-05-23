@@ -42,11 +42,11 @@
 
 ---
 
-### Phase 11: Memory Surface Activation — ✅ shipped 2026-05-23 (2 plans, OBS-01 carries one open gap)
+### Phase 11: Memory Surface Activation — ✅ shipped 2026-05-23 (3 plans, all requirements satisfied)
 
 **Goal:** Wire memory extraction so chat-agent runs persist memory rows that os.agno.com Memory tab displays.
 
-**Requirements:** MEM-01 ✅, MEM-02 ✅, MEM-03 ✅, OBS-01 (memory path) ⚠️ partial — `InstrumentedMemoryManager` is wired but the deployed chat/supervisor flow uses Agno's `update_memory_task` path, which is not yet instrumented. Follow-up tracked as plan 11-03.
+**Requirements:** MEM-01 ✅, MEM-02 ✅, MEM-03 ✅, OBS-01 (memory path) ✅ — both auto-extraction (`create_user_memories`) and the agentic-memory-tool path (`update_memory_task`) emit structured log lines. Closed by plan 11-03 (2026-05-23).
 
 **Success criteria:**
 1. Run a chat-agent conversation containing memory-worthy content; within 5 seconds, the Memory tab in os.agno.com shows ≥1 new entry.

@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AgentOS Surface Activation
-current_phase: 11-memory-surface-activation (shipped; OBS-01 follow-up tracked)
+current_phase: 11-memory-surface-activation (shipped — all requirements satisfied)
 status: in_progress
-last_updated: "2026-05-23T02:55:00Z"
-last_activity: 2026-05-23 — Phase 11 shipped (MEM-01/02/03 ✅, OBS-01 partial)
+last_updated: "2026-05-23T03:40:00Z"
+last_activity: 2026-05-23 — Plan 11-03 shipped (OBS-01 memory path fully closed via update_memory_task instrumentation)
 progress:
   total_phases: 6
   completed_phases: 0
@@ -39,7 +39,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 - Phase 07 (wave-5-evals): evals/ scaffold + 18 real cases + baselines + pre-commit router — COMPLETE, verified 2026-05-21, 30 smoke tests green
 - Phase 08 (litellm-nim-routing): NVIDIA NIM via LiteLLM + per-agent model routing — COMPLETE, 48/48 evals green, shipped 2026-05-22
 - Phase 09 (litellm-provider-label): Relabel Agno dashboard provider OpenAI→LiteLLM — COMPLETE, shipped 2026-05-22
-- Phase 11 (memory-surface-activation): PostgresDb.id pinned to `ultra-brain-main`, explicit Agent/Team ids, curator+ingest opted out of auto-extract, `InstrumentedMemoryManager` wired, supervisor `reasoning=False` unhung the team, telegram adapter `httpx.Timeout(read=90)` shape. MEM-01/02/03 ✅, OBS-01 partial (chat/supervisor flow uses agentic-tool path that 11-01 didn't override — tracked as plan 11-03). Shipped 2026-05-23, 11 commits.
+- Phase 11 (memory-surface-activation): PostgresDb.id pinned to `ultra-brain-main`, explicit Agent/Team ids, curator+ingest opted out of auto-extract, `InstrumentedMemoryManager` wired (with `update_memory_task` overrides for the agentic-tool path added in 11-03), supervisor `reasoning=False` unhung the team, telegram adapter `httpx.Timeout(read=90)` shape. MEM-01/02/03 ✅, OBS-01 ✅ (memory path fully satisfied — both auto-extraction and agentic-tool paths emit structured log lines). Shipped 2026-05-23.
 
 ## Deferred to v2.0+
 
