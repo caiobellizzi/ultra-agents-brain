@@ -66,30 +66,8 @@ class InstrumentedEvalRecorder:
     # internal -----------------------------------------------------------
 
     def _record(self, response, args, kwargs, agent_id, started, error):
-        db_id = getattr(self.db, "id", None)
         latency_ms = int((time.monotonic() - started) * 1000)
-        run_id = getattr(response, "run_id", None) or str(uuid.uuid4())
-
-        model_id, model_provider = self._extract_model(response)
-        eval_input = self._extract_input(args, kwargs)
-        output_dump = self._dump_output(response)
-
-        record = EvalRunRecord(
-            run_id=run_id,
-            eval_type=EvalType.AGENT_AS_JUDGE,
-            agent_id=agent_id,
-            model_id=model_id,
-            model_provider=model_provider,
-            eval_input=eval_input,
-            eval_data={
-                "output": output_dump,
-                "latency_ms": latency_ms,
-                "model_id": model_id,
-                "model_provider": model_provider,
-                "status": "ok" if error is None else "error",
-                "score": None,
-            },
-        )
+        record = self._build_eval_record(response, args, kwargs, agent_id, latency_ms, error)
 
         status = "ok"
         error_type: Optional[str] = None
@@ -104,17 +82,37 @@ class InstrumentedEvalRecorder:
 
         self._emit(
             agent_id=agent_id,
-            db_id=db_id,
-            row_id=run_id if status == "ok" else None,
+            db_id=getattr(self.db, "id", None),
+            row_id=record.run_id if status == "ok" else None,
             latency_ms=latency_ms,
             status=status,
             eval_type=EvalType.AGENT_AS_JUDGE.value,
-            model_provider=model_provider,
-            model_id=model_id,
+            model_provider=record.model_provider,
+            model_id=record.model_id,
             score=None,
             case_id=None,
             error_type=error_type,
             error_msg=error_msg,
+        )
+
+    def _build_eval_record(self, response, args, kwargs, agent_id, latency_ms, error) -> EvalRunRecord:
+        run_id = getattr(response, "run_id", None) or str(uuid.uuid4())
+        model_id, model_provider = self._extract_model(response)
+        return EvalRunRecord(
+            run_id=run_id,
+            eval_type=EvalType.AGENT_AS_JUDGE,
+            agent_id=agent_id,
+            model_id=model_id,
+            model_provider=model_provider,
+            eval_input=self._extract_input(args, kwargs),
+            eval_data={
+                "output": self._dump_output(response),
+                "latency_ms": latency_ms,
+                "model_id": model_id,
+                "model_provider": model_provider,
+                "status": "ok" if error is None else "error",
+                "score": None,
+            },
         )
 
     def _extract_model(self, response) -> tuple[Optional[str], Optional[str]]:
