@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AgentOS Surface Activation
-current_phase: 11-memory-surface-activation (shipped — all requirements satisfied)
-status: in_progress
-last_updated: "2026-05-23T03:40:00Z"
-last_activity: 2026-05-23 — Plan 11-03 shipped (OBS-01 memory path fully closed via update_memory_task instrumentation)
+current_phase: complete (v1.5 milestone done — phases 1–9)
+status: completed
+last_updated: "2026-05-23T04:06:32.601Z"
+last_activity: 2026-05-22 — Milestone v2.0 started
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 5
+  percent: 33
 ---
 
 # STATE — ultra-agents-brain
