@@ -120,6 +120,64 @@ class InstrumentedMemoryManager(MemoryManager):
                 extracted_count=max(0, row_count_after - row_count_before),
             )
 
+    def update_memory_task(self, task: str, user_id: Optional[str] = None) -> str:
+        started = time.monotonic()
+        db_id = getattr(self.db, "id", None) if self.db is not None else None
+        status = "ok"
+        error_type: Optional[str] = None
+        error_msg: Optional[str] = None
+        row_count_before = self._safe_count(user_id)
+        try:
+            return super().update_memory_task(task=task, user_id=user_id)
+        except Exception as exc:
+            status = "error"
+            error_type = exc.__class__.__name__
+            error_msg = str(exc)[:200]
+            raise
+        finally:
+            row_count_after = self._safe_count(user_id)
+            latency_ms = int((time.monotonic() - started) * 1000)
+            self._emit(
+                agent_id=None,
+                team_id=None,
+                user_id=user_id,
+                db_id=db_id,
+                latency_ms=latency_ms,
+                status=status,
+                error_type=error_type,
+                error_msg=error_msg,
+                extracted_count=max(0, row_count_after - row_count_before),
+            )
+
+    async def aupdate_memory_task(self, task: str, user_id: Optional[str] = None) -> str:
+        started = time.monotonic()
+        db_id = getattr(self.db, "id", None) if self.db is not None else None
+        status = "ok"
+        error_type: Optional[str] = None
+        error_msg: Optional[str] = None
+        row_count_before = self._safe_count(user_id)
+        try:
+            return await super().aupdate_memory_task(task=task, user_id=user_id)
+        except Exception as exc:
+            status = "error"
+            error_type = exc.__class__.__name__
+            error_msg = str(exc)[:200]
+            raise
+        finally:
+            row_count_after = self._safe_count(user_id)
+            latency_ms = int((time.monotonic() - started) * 1000)
+            self._emit(
+                agent_id=None,
+                team_id=None,
+                user_id=user_id,
+                db_id=db_id,
+                latency_ms=latency_ms,
+                status=status,
+                error_type=error_type,
+                error_msg=error_msg,
+                extracted_count=max(0, row_count_after - row_count_before),
+            )
+
     def _safe_count(self, user_id: Optional[str]) -> int:
         """Best-effort row count for the OBS-01 extracted_count metric.
         Returns 0 on any error (counting is observability, not behavior)."""
