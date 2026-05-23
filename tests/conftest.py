@@ -16,3 +16,21 @@ def tmp_vault(tmp_path, monkeypatch):
     v.mkdir()
     monkeypatch.setenv("VAULT_PATH", str(v))
     return v
+
+
+@pytest.fixture
+def live_postgres_dsn_knowledge():
+    """Live POSTGRES_DSN_KNOWLEDGE; skip test if unset."""
+    dsn = os.getenv("POSTGRES_DSN_KNOWLEDGE")
+    if not dsn:
+        pytest.skip("POSTGRES_DSN_KNOWLEDGE not set; skipping live test.")
+    return dsn
+
+
+@pytest.fixture
+def live_postgres_dsn_sessions():
+    """Live POSTGRES_DSN_SESSIONS; skip test if unset."""
+    dsn = os.getenv("POSTGRES_DSN_SESSIONS")
+    if not dsn:
+        pytest.skip("POSTGRES_DSN_SESSIONS not set; skipping live test.")
+    return dsn
