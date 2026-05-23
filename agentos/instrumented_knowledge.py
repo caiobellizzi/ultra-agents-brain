@@ -118,15 +118,41 @@ class InstrumentedKnowledge(Knowledge):
     def _bump_access_counts(self, documents: List[Any]) -> None:
         if not self.contents_db or not documents:
             return
+        # Agno's PgVector search returns Documents whose `content_id` attribute
+        # and `meta_data.content_id` are both None in current versions. The
+        # reliable identifier on every hit is `doc.name`, which equals the
+        # rel_path that `reindex()` set as the agno_knowledge row's `name`.
+        # Prefer content_id when Agno starts populating it; fall back to name.
         seen: set[str] = set()
+        name_lookup_cache: dict[str, Any] | None = None  # built lazily
+
         for doc in documents:
-            meta = getattr(doc, "meta_data", None) or {}
-            content_id = meta.get("content_id")
-            if not content_id or content_id in seen:
+            content_id = (
+                getattr(doc, "content_id", None)
+                or (getattr(doc, "meta_data", None) or {}).get("content_id")
+            )
+            doc_name = getattr(doc, "name", None)
+            key = content_id or doc_name
+            if not key or key in seen:
                 continue
-            seen.add(content_id)
+            seen.add(key)
+
             try:
-                current = self.contents_db.get_knowledge_content(content_id)
+                current = None
+                if content_id:
+                    current = self.contents_db.get_knowledge_content(content_id)
+                if current is None and doc_name:
+                    if name_lookup_cache is None:
+                        result = self.contents_db.get_knowledge_contents()
+                        rows = (
+                            result[0]
+                            if isinstance(result, tuple) and len(result) == 2
+                            else result
+                        )
+                        name_lookup_cache = {
+                            getattr(r, "name", None): r for r in (rows or [])
+                        }
+                    current = name_lookup_cache.get(doc_name)
                 if current is None:
                     continue
                 current.access_count = (getattr(current, "access_count", 0) or 0) + 1
@@ -134,7 +160,7 @@ class InstrumentedKnowledge(Knowledge):
                 self.contents_db.upsert_knowledge_content(current)
             except Exception:
                 # Observability bugs must never crash a real agent reply.
-                log.exception("access_count bump failed for %s", content_id)
+                log.exception("access_count bump failed for %s", key)
 
     def _emit(
         self,
