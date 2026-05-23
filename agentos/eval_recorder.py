@@ -1,0 +1,148 @@
+"""OBS-01 instrumented eval recorder — wraps Agent/Team run() / arun()
+and writes one EvalRunRecord per run via db.create_eval_run."""
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import time
+import uuid
+from typing import Any, Optional
+
+from agno.db.schemas.evals import EvalRunRecord, EvalType
+
+log = logging.getLogger("agentos.eval")
+log.setLevel(logging.INFO)
+if not log.handlers and not logging.getLogger().handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    log.addHandler(_h)
+    log.propagate = False
+
+
+class InstrumentedEvalRecorder:
+    """Post-run wrapper. Attach to an Agent or Team with .wrap(agent).
+
+    Replaces agent.run and agent.arun with closures that call the original
+    then write an EvalRunRecord (eval_type=AGENT_AS_JUDGE, score=null —
+    live traffic is metadata-only at write time; suite scoring is plan 12-02).
+    """
+
+    def __init__(self, db: Any) -> None:
+        self.db = db
+
+    def wrap(self, agent: Any) -> Any:
+        original_run = agent.run
+        original_arun = agent.arun
+        agent_id = getattr(agent, "id", None) or getattr(agent, "name", None)
+        recorder = self
+
+        def instrumented_run(*args, **kwargs):
+            started = time.monotonic()
+            try:
+                response = original_run(*args, **kwargs)
+            except Exception:
+                recorder._record(None, args, kwargs, agent_id, started, error=None)
+                raise
+            recorder._record(response, args, kwargs, agent_id, started, error=None)
+            return response
+
+        async def instrumented_arun(*args, **kwargs):
+            started = time.monotonic()
+            try:
+                response = await original_arun(*args, **kwargs)
+            except Exception:
+                raise
+            await asyncio.to_thread(
+                recorder._record, response, args, kwargs, agent_id, started, None
+            )
+            return response
+
+        agent.run = instrumented_run
+        agent.arun = instrumented_arun
+        agent._eval_recorder = self
+        return agent
+
+    # internal -----------------------------------------------------------
+
+    def _record(self, response, args, kwargs, agent_id, started, error):
+        db_id = getattr(self.db, "id", None)
+        latency_ms = int((time.monotonic() - started) * 1000)
+        run_id = getattr(response, "run_id", None) or str(uuid.uuid4())
+
+        model_id, model_provider = self._extract_model(response)
+        eval_input = self._extract_input(args, kwargs)
+        output_dump = self._dump_output(response)
+
+        record = EvalRunRecord(
+            run_id=run_id,
+            eval_type=EvalType.AGENT_AS_JUDGE,
+            agent_id=agent_id,
+            model_id=model_id,
+            model_provider=model_provider,
+            eval_input=eval_input,
+            eval_data={
+                "output": output_dump,
+                "latency_ms": latency_ms,
+                "model_id": model_id,
+                "model_provider": model_provider,
+                "status": "ok" if error is None else "error",
+                "score": None,
+            },
+        )
+
+        status = "ok"
+        error_type: Optional[str] = None
+        error_msg: Optional[str] = None
+        try:
+            self.db.create_eval_run(record)
+        except Exception as exc:
+            status = "error"
+            error_type = exc.__class__.__name__
+            error_msg = str(exc)[:200]
+            # swallow — OBS-01 captures the failure; agent reply still returns.
+
+        self._emit(
+            agent_id=agent_id,
+            db_id=db_id,
+            row_id=run_id if status == "ok" else None,
+            latency_ms=latency_ms,
+            status=status,
+            eval_type=EvalType.AGENT_AS_JUDGE.value,
+            model_provider=model_provider,
+            model_id=model_id,
+            score=None,
+            case_id=None,
+            error_type=error_type,
+            error_msg=error_msg,
+        )
+
+    def _extract_model(self, response) -> tuple[Optional[str], Optional[str]]:
+        model = getattr(response, "model", None)
+        if model is None:
+            return None, None
+        return getattr(model, "id", None), getattr(model, "provider", None)
+
+    def _extract_input(self, args, kwargs) -> dict:
+        user_message: Any = None
+        if args:
+            user_message = args[0]
+        elif "message" in kwargs:
+            user_message = kwargs["message"]
+        return {"user_message": str(user_message) if user_message is not None else None}
+
+    def _dump_output(self, response) -> Any:
+        if response is None:
+            return None
+        content = getattr(response, "content", None)
+        if hasattr(content, "model_dump"):
+            return content.model_dump()
+        return content
+
+    def _emit(self, **fields) -> None:
+        record = {"path": "eval"}
+        record.update(fields)
+        if fields.get("status") == "error":
+            log.error("OBS-01 eval write failed: %s", json.dumps(record, default=str))
+        else:
+            log.info("OBS-01 eval write: %s", json.dumps(record, default=str))
