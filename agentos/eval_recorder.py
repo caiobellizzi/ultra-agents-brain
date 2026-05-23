@@ -144,3 +144,73 @@ class InstrumentedEvalRecorder:
             log.error("OBS-01 eval write failed: %s", json.dumps(record, default=str))
         else:
             log.info("OBS-01 eval write: %s", json.dumps(record, default=str))
+
+
+def patch_classes_for_recording(db: Any) -> None:
+    """Class-level patch of Agent.run / Agent.arun / Team.run / Team.arun
+    so eval rows are written even when Agno deep_copies instances per HTTP
+    request. Instance-level wrap() (above) does NOT survive Agno's
+    `agent.deep_copy()` call in the HTTP route — fresh copies lose
+    the instance-set arun. This patch is class-level, so deep_copy clones
+    inherit the instrumentation automatically. Idempotent — re-calls are
+    no-ops.
+
+    Streaming and background paths are pure pass-through (no row write):
+    Agno returns an async-iterator when stream=True/background=True, which
+    the wrapper cannot await + instrument without consuming the stream
+    twice. Non-streaming (stream=False, the AgentOS standard for
+    /agents/{id}/runs with stream form-field unset or false) is the
+    instrumented path."""
+    from agno.agent.agent import Agent
+    from agno.team.team import Team
+
+    recorder = InstrumentedEvalRecorder(db=db)
+
+    for cls in (Agent, Team):
+        if getattr(cls, "_eval_recorder_patched", False):
+            continue
+
+        original_run = cls.run
+        original_arun = cls.arun
+
+        def make_run(orig):
+            def patched_run(self, *args, **kwargs):
+                if kwargs.get("stream", False) or kwargs.get("background", False):
+                    return orig(self, *args, **kwargs)
+                started = time.monotonic()
+                try:
+                    response = orig(self, *args, **kwargs)
+                except Exception:
+                    raise
+                recorder._record(response, args, kwargs, getattr(self, "id", None), started, None)
+                return response
+
+            return patched_run
+
+        def make_arun(orig):
+            def patched_arun(self, *args, **kwargs):
+                if kwargs.get("stream", False) or kwargs.get("background", False):
+                    return orig(self, *args, **kwargs)
+
+                async def _wrapped():
+                    started = time.monotonic()
+                    response = await orig(self, *args, **kwargs)
+                    await asyncio.to_thread(
+                        recorder._record,
+                        response,
+                        args,
+                        kwargs,
+                        getattr(self, "id", None),
+                        started,
+                        None,
+                    )
+                    return response
+
+                return _wrapped()
+
+            return patched_arun
+
+        cls.run = make_run(original_run)
+        cls.arun = make_arun(original_arun)
+        cls._eval_recorder_patched = True
+        cls._eval_recorder = recorder

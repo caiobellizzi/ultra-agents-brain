@@ -64,10 +64,13 @@ research_agent = make_research_agent(memory_manager=memory, knowledge=kb, db=db)
 supervisor_team = make_supervisor_team(memory_manager=memory, db=db)
 
 # --- OBS-01 / EVAL-01: instrument every Agent/Team with the eval recorder ---
-from agentos.eval_recorder import InstrumentedEvalRecorder
-_eval_recorder = InstrumentedEvalRecorder(db=db)
-for _agent in (chat_agent, curator_agent, ingest_agent, query_agent, research_agent, supervisor_team):
-    _eval_recorder.wrap(_agent)
+# Class-level patch — Agno's HTTP route calls agent.deep_copy() per request,
+# which strips instance-set arun wrappers. The class-level patch survives
+# deep_copy because fresh instances inherit the patched class methods, and
+# the bound recorder is class-level (Agent._eval_recorder), so every Agent
+# instance picks it up via attribute lookup.
+from agentos.eval_recorder import patch_classes_for_recording
+patch_classes_for_recording(db=db)
 
 # --- AgentOS: MCP + A2A + tracing ---
 # NOTE: In this version of Agno, enable_mcp_server is set ONLY on AgentOS();
