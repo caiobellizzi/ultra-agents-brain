@@ -6,7 +6,7 @@
 - **Python 3.11+** — the project uses features not available in earlier versions
 - **Docker and Docker Compose** — required to run the LiteLLM proxy service
 - **Git** — to clone the repository
-- At least one LLM provider API key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY`), or a local LM Studio instance
+- At least one LLM provider API key — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, or `NVIDIA_NIM_API_KEY` (free 40 RPM/model; required by the orchestrator and research-worker NIM fallback aliases in `deploy/litellm/config.yaml`) — or a local LM Studio instance
 
 ## Installation Steps
 

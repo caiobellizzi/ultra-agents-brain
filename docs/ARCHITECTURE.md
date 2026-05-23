@@ -3,7 +3,7 @@
 
 ## System Overview
 
-ultra-agents-brain is a personal second-brain system that hosts a fleet of AI agents over a local markdown vault. External input arrives from a Telegram channel or systemd cron timers; each message is routed to one of five Agno agents exposed via an AgentOS FastAPI server running on port 7000. Agents read and write markdown notes in a local vault directory, use a LiteLLM proxy as a model-routing layer (supporting local LM Studio models alongside cloud providers), and persist session memory in a shared SQLite database. The system follows a layered architecture: a thin HTTP host (`agentos`) delegates to domain logic (`ultra_brain`) for vault I/O, extraction, research, and cost tracking.
+ultra-agents-brain is a personal second-brain system that hosts a fleet of AI agents over a local markdown vault. External input arrives from a Telegram channel or VPS cron jobs; each message is routed to one of five Agno agents (or the `supervisor` team that orchestrates them) exposed via an AgentOS FastAPI server, default port `7001` on macOS dev (Control Center occupies 7000). Agents read and write markdown notes in a local vault directory, use a LiteLLM proxy as a model-routing layer (local LM Studio + cloud providers + NVIDIA NIM), and persist session memory in **SqliteDb** locally or **PostgresDb** (with pgvector knowledge schema) on the VPS — `agentos/db.py` picks based on `POSTGRES_DSN_SESSIONS`. The Memory and Knowledge surfaces are wrapped by `agentos/instrumented_memory.py` and `agentos/instrumented_knowledge.py` for structured observability, and per-turn evals are recorded by `agentos/eval_recorder.py`. The system follows a layered architecture: a thin HTTP host (`agentos`) delegates to domain logic (`ultra_brain`) for vault I/O, extraction, research, and cost tracking.
 
 ## Component Diagram
 
@@ -15,12 +15,12 @@ ultra-agents-brain is a personal second-brain system that hosts a fleet of AI ag
              │ POST /agents/{id}/runs              │ curl POST
              ▼                                     ▼
 ┌────────────────────────────────────────────────────────────┐
-│              AgentOS FastAPI Host  (:7000)                  │
-│  agentos/app.py — Agno AgentOS wrapping five agents        │
+│           AgentOS FastAPI Host  (:7001 dev / :7000 prod)    │
+│  agentos/app.py — Agno AgentOS: 5 agents + supervisor team │
 │                                                            │
-│  ┌──────────┐ ┌────────┐ ┌───────┐ ┌──────────┐ ┌──────┐ │
-│  │  chat    │ │ ingest │ │ query │ │ research │ │curate│ │
-│  └────┬─────┘ └───┬────┘ └───┬───┘ └────┬─────┘ └──┬───┘ │
+│  ┌──────┐ ┌──────┐ ┌─────┐ ┌────────┐ ┌──────┐ ┌────────┐│
+│  │ chat │ │ingest│ │query│ │research│ │curate│ │supervis││
+│  └──┬───┘ └──┬───┘ └──┬──┘ └────┬───┘ └──┬───┘ └────┬───┘│
 └───────┼───────────┼──────────┼──────────┼──────────┼──────┘
         │           │          │          │          │
         ▼           ▼          ▼          ▼          ▼
@@ -53,18 +53,22 @@ ultra-agents-brain is a personal second-brain system that hosts a fleet of AI ag
 │   default-worker, smart-worker      │
 └─────────────────────────────────────┘
 
-┌──────────────────────────────┐
-│  SQLite DB  (uab-state/)     │
-│  Shared session memory for   │
-│  all Agno agents             │
-└──────────────────────────────┘
+┌────────────────────────────────────────────────┐
+│  Session + Knowledge persistence (agentos/db.py)│
+│  • SqliteDb at $UAB_DB_PATH (local/dev default) │
+│  • PostgresDb id="ultra-brain-main" when        │
+│    POSTGRES_DSN_SESSIONS set (VPS prod)         │
+│  • pgvector schema agno_knowledge for vault RAG │
+│  • Wrapped by InstrumentedMemory / Knowledge    │
+│    and eval_recorder (Phase 11+ observability)  │
+└────────────────────────────────────────────────┘
 ```
 
 ## Data Flow
 
 A typical user message follows this path:
 
-1. **Telegram adapter** sends `POST /agents/{agent_id}/runs` with JSON body to the AgentOS server at `:7000`.
+1. **Telegram adapter** sends `POST /agents/{agent_id}/runs` with JSON body to the AgentOS server (default `:7001` on macOS dev, `:7000` on Linux where Control Center isn't a conflict).
 2. **AgentOS** (`agentos/app.py`) routes the run to the matching Agno `Agent` instance.
 3. The agent calls its LLM via **`agentos/model.py`**, which resolves to an OpenAI-compatible endpoint on the **LiteLLM proxy** at `:4000`. LiteLLM selects the actual model (local LM Studio or a cloud provider) based on the requested model group (`cheap-worker`, `default-worker`, etc.).
 4. The agent invokes one or more **tool callables** from `agentos/tools/vault.py` — for example `query_vault`, `ingest_to_vault`, or `research_topic`.
@@ -78,10 +82,14 @@ A typical user message follows this path:
 | Abstraction | File | Description |
 |---|---|---|
 | `AgentOS` | `agentos/app.py` | Agno's built-in multi-agent FastAPI host; exposes the standard Agno HTTP surface |
-| `Agent` (×5) | `agentos/agents/` | Individual Agno agents: `chat`, `ingest`, `query`, `research`, `curator` |
+| `Agent` (×5) | `agentos/agents/` | Individual Agno agents: `chat`, `ingest`, `query`, `research`, `curator` — each with an explicit `id=` (Phase 11-01) for stable routing |
+| Supervisor team | `agentos/agents/supervisor.py` | `make_supervisor_team()` — coordinates the 5 agents for multi-step tasks |
 | `chat_model()` | `agentos/model.py` | Factory returning an `OpenAIChat` pointed at the LiteLLM proxy; accepts a model-tier string |
-| `VaultKnowledge` | `agentos/knowledge.py` | Thin Agno `Knowledge` wrapper that enumerates vault markdown files |
-| `SqliteDb` | `agentos/db.py` | Shared Agno session database; one instance used by all agents |
+| `make_knowledge()` | `agentos/knowledge.py` | Knowledge factory; returns an `InstrumentedKnowledge` wrapper over Agno's `Knowledge` |
+| `InstrumentedKnowledge` | `agentos/instrumented_knowledge.py` | Read-path observability wrapper for vault RAG (Phase 13-02) |
+| `InstrumentedMemoryManager` | `agentos/instrumented_memory.py` | Structured logging of memory extraction decisions |
+| `EvalRecorder` | `agentos/eval_recorder.py` | Per-turn evaluation capture into Postgres |
+| `db` / `POSTGRES_DB` | `agentos/db.py` | SqliteDb always-on; PostgresDb (id=`ultra-brain-main`) when `POSTGRES_DSN_SESSIONS` set |
 | Tool callables | `agentos/tools/vault.py` | Plain-Python bridge functions between Agno agents and `ultra_brain` modules |
 | `ultra_brain.ingest` | `ultra_brain/ingest.py` | URL/file extraction pipeline (Jina always-on; crawl4ai via env var) and vault filing |
 | `ultra_brain.query` | `ultra_brain/query.py` | Vault retrieval with `[[file.md:NNN]]` citation tokens |

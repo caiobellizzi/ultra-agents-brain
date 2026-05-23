@@ -3,7 +3,7 @@
 
 ## Test Framework and Setup
 
-The project uses **pytest** (version 9.0.3, as reflected in the `.pytest_cache` build artifacts) with Python 3.13. Tests live in the `tests/` directory at the project root.
+The project uses **pytest 9.0.3** with **Python 3.13.7**. Tests live in `tests/` with two subdirectories: `tests/unit/` and `tests/integration/`. Shared fixtures live in `tests/conftest.py` (sets `LITELLM_MASTER_KEY` for transitive imports, provides `tmp_vault`, `live_postgres_dsn_knowledge`, and the EVAL-02 suite write hook).
 
 Before running tests, ensure the virtual environment is active and dependencies are installed:
 
@@ -44,9 +44,20 @@ Run a specific test by name:
 pytest tests/test_core.py -k "test_name"
 ```
 
+### Marker tiers (declared in `pytest.ini`)
+
+```bash
+pytest -k smoke         # fast schema-level assertions, no LLM calls
+pytest -k integration   # full agent runs, requires live LiteLLM + DB
+pytest -k live          # requires deployed VPS (set POSTGRES_DSN_KNOWLEDGE etc.)
+pytest -k "smoke or unit"  # combine for local pre-push checks
+```
+
+The `live` tier auto-skips when required env vars (`POSTGRES_DSN_KNOWLEDGE`, etc.) are unset.
+
 ## Writing New Tests
 
-Test files follow the naming convention `test_*.py` and live in the `tests/` directory. There is no shared `conftest.py` or test helper module — each test file imports directly from the modules it exercises.
+Test files follow the naming convention `test_*.py`. Use `tests/unit/` for pure logic, `tests/integration/` for tests that need a running LiteLLM or DB, and the top-level `tests/test_*.py` files for the legacy three suites. Shared fixtures live in `tests/conftest.py`.
 
 Existing test files map to their modules as follows:
 
@@ -71,4 +82,4 @@ pytest tests/ --cov=ultra_brain --cov=agentos --cov=channels --cov-report=term-m
 
 ## CI Integration
 
-No CI/CD pipeline is configured. There is no `.github/workflows/` directory in the repository. Tests must be run locally before committing.
+No GitHub Actions or other remote CI is configured (no `.github/workflows/`). The local quality gate is a **pre-commit hook** (`tools/precommit_eval_router.sh` via `.pre-commit-config.yaml`) that runs scoped smoke-tier agent evals on changed files. Install once per clone with `pre-commit install`. Tests beyond what the hook covers must be run manually before committing.

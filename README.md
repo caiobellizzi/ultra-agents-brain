@@ -71,23 +71,28 @@ python -m ultra_brain telos-check
 | Command | Description |
 |---|---|
 | `ensure-vault` | Verify vault directory is present and accessible |
-| `ingest` | Ingest a Markdown file into the knowledge base |
+| `ingest` | Ingest a URL or Markdown file into the vault |
 | `query` | Query the vault with a natural-language question |
-| `lint` | Lint vault Markdown files |
+| `lint` | Lint vault Markdown files (writes `vault/_system/lint-report.md`) |
 | `digest` | Generate a daily digest from vault contents |
+| `daily-brief` | Synthesize the day's brief and deliver it to Telegram (`--no-telegram` to skip) |
 | `cost-summary` | Print LLM spending summary from the cost ledger |
-| `research-plan` | Generate a research plan document |
-| `research-aggregate` | Aggregate research plan outputs |
-| `telos-check` | Run a goal-alignment check against stored telos |
+| `research-plan` | Plan a multi-worker research run for a topic |
+| `research-aggregate` | Aggregate worker outputs into a Research project under `vault/Projects/Research/` |
+| `telos-check` | Score an action against the stored telos doc |
 | `telos-interview` | Interactive telos capture interview |
-| `monitor` | Monitor agent and system health |
-| `review` | Review vault entries |
+| `monitor` | Poll configured RSS feeds and file new items to `vault/_inbox/` |
+| `bluesky` | Poll configured Bluesky handles and file new posts to `vault/_inbox/` |
+| `review` | Write a weekly strategic review to `vault/_system/weekly-review.md` |
+
+For operator-side flows (cadence, recovery, adding sources) see [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+For the source-to-vault map see [docs/SOURCES.md](docs/SOURCES.md).
 
 ## Architecture
 
 The system has three runtime layers:
 
-- **AgentOS** (`agentos/`) — FastAPI app hosting five Agno agents: `chat`, `ingest`, `query`, `research`, `curator`. Exposes the standard Agno HTTP surface compatible with the hosted dashboard at `https://os.agno.com`.
+- **AgentOS** (`agentos/`) — FastAPI app hosting six Agno surfaces: agents `chat`, `ingest`, `query`, `research`, `curator`, plus a `supervisor` team (`agentos/agents/supervisor.py`) that delegates across them. Exposes the standard Agno HTTP surface compatible with the hosted dashboard at `https://os.agno.com`. Default bind port `7001` (macOS Control Center occupies 7000).
 - **LiteLLM proxy** — Docker service that routes model calls across a 5-tier matrix (Agno dashboard reports `provider: LiteLLM` for every agent; the real upstream depends on the tier): `orchestrator` (NVIDIA NIM DeepSeek V4 Pro → GLM-5.1 → cloud-sonnet), `research-worker` (NIM DeepSeek V4 Flash → Llama 3.1 405B → cloud-sonnet), `default-worker` (local LM Studio Gemma → NIM Llama 3.3 70B → Mistral 2 Large → cloud-groq), `cheap-worker` and `private-worker` (local-only). NIM is treated as cloud-allowed (equivalent privacy posture to Anthropic/Groq); `private-worker` stays strictly local by contract.
 - **Telegram bot / channels** — Calls `POST /agents/{agent_id}/runs` on the AgentOS host. Configured via `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_CHAT_IDS`.
 
