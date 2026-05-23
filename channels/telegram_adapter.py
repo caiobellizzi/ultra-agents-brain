@@ -200,7 +200,14 @@ async def send_approval_buttons(
 
 
 def _agent_id_for(text: str) -> str:
-    """Map message text to an AgentOS agent ID."""
+    """Map message text to an AgentOS agent ID.
+
+    Phase 11-02 follow-up: default route changed from `supervisor` to `chat`.
+    The supervisor team still hangs (>120s) on memory-extraction-triggering
+    messages even after `reasoning=False` (see 11-02 evidence). The chat
+    agent answers in ~16s with full memory wiring. Use `/supervisor <msg>`
+    to opt into the team route once that hang is diagnosed.
+    """
     lower = text.strip().lower()
     if lower.startswith("/ingest "):
         return "ingest"
@@ -208,7 +215,9 @@ def _agent_id_for(text: str) -> str:
         return "query"
     if lower.startswith("/research "):
         return "research"
-    return "supervisor"
+    if lower.startswith("/supervisor "):
+        return "supervisor"
+    return "chat"
 
 
 def _message_body(text: str, agent_id: str) -> str:
@@ -217,6 +226,7 @@ def _message_body(text: str, agent_id: str) -> str:
         "ingest": "/ingest ",
         "query": "/query ",
         "research": "/research ",
+        "supervisor": "/supervisor ",
     }
     prefix = prefixes.get(agent_id)
     if prefix and text.strip().lower().startswith(prefix):
