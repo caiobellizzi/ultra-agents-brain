@@ -10,6 +10,17 @@ from typing import Any, List, Optional
 from agno.memory.manager import MemoryManager
 
 log = logging.getLogger("agentos.memory")
+# OBS-01 requires every memory write to emit a log line. Force the logger to
+# INFO so the success path is visible even when the root logger is configured
+# at WARNING (which is the default under uvicorn / systemd journal). Attach a
+# StreamHandler iff no handlers exist on this logger or root, so the line is
+# captured regardless of host logging setup.
+log.setLevel(logging.INFO)
+if not log.handlers and not logging.getLogger().handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    log.addHandler(_h)
+    log.propagate = False
 
 
 class InstrumentedMemoryManager(MemoryManager):
