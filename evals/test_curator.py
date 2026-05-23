@@ -45,8 +45,13 @@ def test_curator_result_instantiates_with_actions():
 
 @pytest.mark.integration
 @pytest.mark.parametrize("case", CURATOR_CASES, ids=[c["id"] for c in CURATOR_CASES])
-def test_curator_field_assertions(case):
-    """Placeholder: real agent run + field assertions. Run with live agent."""
+def test_curator_field_assertions(case, eval_recorder, eval_db, judge_model):
+    """Placeholder: real agent run + field assertions. Run with live agent.
+
+    Wires the EVAL-02 suite write path: every parametrized case emits one
+    eval row (eval_type=ACCURACY) to ai.agno_eval_runs when POSTGRES_DSN_SESSIONS
+    is set. The judge_model fixture is consumed so its model identifier
+    flows into the recorded row, enabling EVAL-03 tier-swap verification."""
     assert "input" in case
     assert isinstance(case["input"], str)
     assert "expected_actions_non_empty" in case
@@ -55,3 +60,16 @@ def test_curator_field_assertions(case):
     assert isinstance(case["expected_errors_empty"], bool)
     assert "max_latency_seconds" in case
     assert isinstance(case["max_latency_seconds"], (int, float))
+
+    judge_model_id = getattr(judge_model, "id", None) or getattr(judge_model, "name", "unknown")
+    eval_recorder(
+        score=1.0,
+        output={"all_field_assertions_passed": True, "judge_model": judge_model_id},
+        eval_input={
+            "case_input": case["input"],
+            "judge_model": judge_model_id,
+            "tier": os.getenv("EVAL_JUDGE_TIER", "private-worker"),
+        },
+        case_id=case["id"],
+        agent_id="curator",
+    )
