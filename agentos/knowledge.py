@@ -41,6 +41,7 @@ from agno.knowledge.reranker.sentence_transformer import SentenceTransformerRera
 from agno.vectordb.pgvector import PgVector, SearchType
 
 from agentos.db import POSTGRES_DB
+from agentos.instrumented_knowledge import InstrumentedKnowledge
 
 
 # --- logger boilerplate (mirrors agentos/instrumented_memory.py:13-22) ---
@@ -144,7 +145,7 @@ def make_knowledge() -> Knowledge:
         )
         return Knowledge(name="ultra-brain-vault")
 
-    return Knowledge(
+    return InstrumentedKnowledge(
         name="ultra-brain-vault",
         vector_db=vector_db,
         contents_db=POSTGRES_DB,
