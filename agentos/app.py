@@ -63,6 +63,12 @@ query_agent = make_query_agent(memory_manager=memory, knowledge=kb, db=db)
 research_agent = make_research_agent(memory_manager=memory, knowledge=kb, db=db)
 supervisor_team = make_supervisor_team(memory_manager=memory, db=db)
 
+# --- OBS-01 / EVAL-01: instrument every Agent/Team with the eval recorder ---
+from agentos.eval_recorder import InstrumentedEvalRecorder
+_eval_recorder = InstrumentedEvalRecorder(db=db)
+for _agent in (chat_agent, curator_agent, ingest_agent, query_agent, research_agent, supervisor_team):
+    _eval_recorder.wrap(_agent)
+
 # --- AgentOS: MCP + A2A + tracing ---
 # NOTE: In this version of Agno, enable_mcp_server is set ONLY on AgentOS();
 # get_app() reads from self.enable_mcp_server (no separate kwarg on get_app).
