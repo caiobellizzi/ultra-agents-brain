@@ -80,7 +80,7 @@ class EvalLivePolicy:
 
     def privacy_allows(self, payload: Any) -> PrivacyDecision:
         rendered = _stable_json(payload)
-        if len(rendered) > self.max_payload_chars:
+        if len(_payload_text(payload)) > self.max_payload_chars:
             return PrivacyDecision(False, "payload_too_large")
         if _SECRET_KEY_RE.search(rendered):
             return PrivacyDecision(False, "secret_marker")
@@ -127,12 +127,16 @@ def normalize_score(value: Any) -> float | None:
         if "passed" in value:
             return 1.0 if bool(value["passed"]) else 0.0
         if "score" in value:
-            return normalize_score(value["score"])
+            return _normalize_numeric(value["score"], scale_ten=True)
     if isinstance(value, bool):
         return 1.0 if value else 0.0
+    return _normalize_numeric(value, scale_ten=False)
+
+
+def _normalize_numeric(value: Any, *, scale_ten: bool) -> float | None:
     if isinstance(value, (int, float)):
         numeric = float(value)
-        if numeric > 1.0:
+        if scale_ten or numeric > 1.0:
             numeric = numeric / 10.0
         return min(1.0, max(0.0, numeric))
     return None
@@ -165,3 +169,11 @@ def _stable_json(value: Any) -> str:
         return json.dumps(value, sort_keys=True, default=str)
     except TypeError:
         return str(value)
+
+
+def _payload_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return " ".join(_payload_text(v) for v in value.values())
+    if isinstance(value, (list, tuple, set)):
+        return " ".join(_payload_text(v) for v in value)
+    return "" if value is None else str(value)
