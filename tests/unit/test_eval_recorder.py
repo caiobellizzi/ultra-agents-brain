@@ -72,7 +72,9 @@ def test_wrap_writes_row_on_success(caplog):
     assert out.content == "hello"
     assert len(db.captured) == 1
     rec = db.captured[0]
-    assert rec.eval_type == EvalType.AGENT_AS_JUDGE
+    assert rec.eval_type == EvalType.PERFORMANCE
+    assert rec.name == "live:chat-test"
+    assert rec.evaluated_component_name == "chat-test"
     assert rec.run_id == "r1"
     assert rec.agent_id == "chat-test"
     assert rec.eval_data["score"] is None
@@ -92,7 +94,8 @@ async def test_wrap_writes_row_on_success_async(caplog):
         out = await agent.arun("hi")
     assert out.content == "hello"
     assert len(db.captured) == 1
-    assert db.captured[0].eval_type == EvalType.AGENT_AS_JUDGE
+    assert db.captured[0].eval_type == EvalType.PERFORMANCE
+    assert db.captured[0].name == "live:chat-test"
     assert db.captured[0].eval_data["status"] == "ok"
 
 
@@ -125,11 +128,52 @@ def test_wrap_emits_obs01_schema(caplog):
     assert isinstance(payload["row_id"], str)
     assert isinstance(payload["latency_ms"], int) and payload["latency_ms"] >= 0
     assert payload["status"] == "ok"
-    assert payload["eval_type"] == "agent_as_judge"
+    assert payload["eval_type"] == "performance"
     assert isinstance(payload["model_provider"], str)
     assert isinstance(payload["model_id"], str)
     assert payload["score"] is None
     assert payload["case_id"] is None
+
+
+def test_wrap_handles_string_model_name():
+    agent, db = _wrap()
+    agent._response_factory = lambda: SimpleNamespace(
+        run_id="r2",
+        content="hello",
+        metrics={},
+        model="private-worker",
+    )
+
+    agent.run("hi")
+
+    rec = db.captured[0]
+    assert rec.model_id == "private-worker"
+    assert rec.eval_data["model_id"] == "private-worker"
+    assert rec.model_provider is None
+
+
+def test_wrap_adds_pending_live_judge_metadata_when_policy_allows(monkeypatch):
+    monkeypatch.setenv("EVAL_LIVE_JUDGE_ENABLED", "true")
+    monkeypatch.setenv("EVAL_LIVE_SAMPLE_RATE", "1.0")
+
+    agent, db = _wrap()
+    agent.run("hi")
+
+    rec = db.captured[0]
+    assert rec.eval_data["judge_status"] == "pending"
+    assert rec.eval_data["judge_attempts"] == 0
+    assert rec.eval_data["judge_rubric_ids"]
+
+
+def test_wrap_omits_live_judge_metadata_by_default(monkeypatch):
+    monkeypatch.delenv("EVAL_LIVE_JUDGE_ENABLED", raising=False)
+    monkeypatch.delenv("EVAL_LIVE_SAMPLE_RATE", raising=False)
+
+    agent, db = _wrap()
+    agent.run("hi")
+
+    rec = db.captured[0]
+    assert "judge_status" not in rec.eval_data
 
 
 def test_app_wires_all_six_recorders():

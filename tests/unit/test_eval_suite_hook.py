@@ -57,6 +57,8 @@ def test_hook_swallows_duplicate(caplog):
     assert len(ok_msgs) == 1, f"expected 1 ok line, got {len(ok_msgs)}"
     assert len(dup_msgs) == 1, f"expected 1 duplicate line, got {len(dup_msgs)}"
     assert db._calls == 2  # both attempts hit the DB; only first inserted
+    assert db.captured[0].name == "eval-suite:chat:case-0"
+    assert db.captured[0].evaluated_component_name == "chat"
 
 
 def test_hook_skips_when_db_none(caplog):
@@ -75,3 +77,47 @@ def test_hook_skips_when_db_none(caplog):
         )
     obs_records = [r for r in caplog.records if "OBS-01 eval suite write" in r.message]
     assert obs_records == [], f"expected zero log lines when db is None, got {obs_records}"
+
+
+def test_suite_run_id_is_deterministic():
+    from evals.conftest import _suite_run_id
+
+    assert _suite_run_id("chat", "case-0", "abc123") == "suite:chat:case-0:abc123"
+
+
+def test_git_identity_tracks_clean_and_dirty_eval_relevant_files(tmp_path):
+    import subprocess
+
+    from evals.conftest import _git_identity
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    (repo / "agentos").mkdir()
+    (repo / "agentos" / "a.py").write_text("x = 1\n")
+    subprocess.run(["git", "add", "agentos/a.py"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "user.name=Test User",
+            "commit",
+            "-m",
+            "init",
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+
+    clean = _git_identity(repo)
+    assert "dirty" not in clean
+
+    (repo / "evals").mkdir()
+    (repo / "evals" / "new_case.py").write_text("CASE = 1\n")
+    dirty = _git_identity(repo)
+
+    assert dirty.startswith(f"{clean}+dirty:")
+    assert dirty == _git_identity(repo)
