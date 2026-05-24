@@ -60,11 +60,11 @@ Vault (/srv/second-brain, Markdown) ←→ AgentOS (FastAPI, Agno, :7000)
 - ✓ systemd timers fire digest (20:00), review (Sun 18:00), poll_feeds (every 4h) — v1.0
 - ✓ 4 STRIDE security mitigations applied (allowlist, callback_data, uabrain user, no hardcoded key) — v1.0
 - ✓ 38-test automated suite green; Nyquist compliant — v1.0
+- ✓ Evals surface writes corrected AgentOS rows: live `performance` parents, suite `accuracy` rows, optional child `agent_as_judge` rows — Phase 12
 
 ### Active (v2.0 — AgentOS Surface Activation)
 
 - [ ] Memory surface — agent runs trigger memory extraction; os.agno.com Memory tab shows real entries
-- [ ] Evals surface — eval suite writes per-run records; dashboard shows scores
 - [ ] Knowledge surface — vault ingest populates knowledge table; agentic RAG hits visible in UI
 - [ ] Approvals surface — HITL approval events surface in AgentOS approvals UI (not just Telegram)
 - [ ] db_id architecture decision — investigate whether Agno expects per-agent db_ids; isolate vs. shared
@@ -105,6 +105,8 @@ Vault (/srv/second-brain, Markdown) ←→ AgentOS (FastAPI, Agno, :7000)
 All 5 agents now run on Agno 2.6.7 production-grade config: Postgres+pgvector, semantic memory, agentic RAG, ReasoningTools, Pydantic-typed outputs, MCP+A2A, 5-tier LiteLLM routing with NVIDIA NIM. 48-case eval suite green with pre-commit router.
 
 **Tech debt forward:** pre-commit install + real baseline regeneration (Phase 07), CostLedger verification after 1 week of use, VERIFICATION.md backfill for phases 1/2/8/9 (docs only).
+
+**Phase 12 complete (2026-05-24):** eval row semantics corrected after live verification. New live agent rows are `performance` telemetry parents, suite rows remain deterministic `accuracy` rows, and optional live judgments are child `agent_as_judge` rows. Historical `Untitled Evaluation` rows are intentionally not migrated.
 
 ## Current Milestone: v2.0 AgentOS Surface Activation
 
@@ -149,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-22 — v2.0 milestone started*
+*Last updated: 2026-05-24 — Phase 12 eval-row semantics corrected*
