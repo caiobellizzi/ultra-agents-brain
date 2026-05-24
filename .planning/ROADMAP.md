@@ -20,7 +20,7 @@
 |----|----------------------------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------|----------|
 | 10 | Diagnostic Audit                       | Trace every write path; decide db_id model                                                 | DIAG-01, DIAG-02                              | 3        |
 | 11 | Memory Surface Activation              | Memory tab in os.agno.com shows entries after agent runs                                   | MEM-01, MEM-02, MEM-03, OBS-01 (memory path)  | 4        |
-| 12 | Evals Surface Activation               | 4/4 | Complete   | 2026-05-24 |
+| 12 | Evals Surface Activation               | 4/4 | Complete    | 2026-05-24 |
 | 13 | Knowledge Surface Activation           | 3/3 | Complete   | 2026-05-23 |
 | 14 | Approvals Surface Activation           | Telegram HITL events surface in Approvals UI with state updates                            | APPR-01, APPR-02, APPR-03, OBS-01 (appr path) | 4        |
 | 15 | worker.monitor Polish + Final Verify   | Daily-brief date bug fixed; vault-sync delete bug fixed; surface-smoke verification doc    | MON-01, MON-02, OBS-02                        | 4        |
