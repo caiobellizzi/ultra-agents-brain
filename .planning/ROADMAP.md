@@ -20,8 +20,8 @@
 |----|----------------------------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------|----------|
 | 10 | Diagnostic Audit                       | Trace every write path; decide db_id model                                                 | DIAG-01, DIAG-02                              | 3        |
 | 11 | Memory Surface Activation              | Memory tab in os.agno.com shows entries after agent runs                                   | MEM-01, MEM-02, MEM-03, OBS-01 (memory path)  | 4        |
-| 12 | Evals Surface Activation               | 3/3 | Complete   | 2026-05-23 |
-| 13 | Knowledge Surface Activation           | 2/3 | In Progress|  |
+| 12 | Evals Surface Activation               | 4/4 | Complete   | 2026-05-24 |
+| 13 | Knowledge Surface Activation           | 3/3 | Complete   | 2026-05-23 |
 | 14 | Approvals Surface Activation           | Telegram HITL events surface in Approvals UI with state updates                            | APPR-01, APPR-02, APPR-03, OBS-01 (appr path) | 4        |
 | 15 | worker.monitor Polish + Final Verify   | Daily-brief date bug fixed; vault-sync delete bug fixed; surface-smoke verification doc    | MON-01, MON-02, OBS-02                        | 4        |
 
@@ -61,6 +61,8 @@
 **Goal:** Wire eval recording so per-run scores and the 48-case suite show up in the Evals dashboard.
 
 **Requirements:** EVAL-01, EVAL-02, EVAL-03, OBS-01 (eval path)
+
+**Corrective follow-up:** `12-04-PLAN.md` imported 2026-05-24 to supersede Phase 12 live-row semantics: unjudged live telemetry rows should be `performance`, suite rows remain `accuracy`, and judged live rows should be child `agent_as_judge` rows. Original high-level requirements stay valid.
 
 **Success criteria:**
 1. Each agent run creates a row in the AgentOS evals table (visible via API and dashboard).

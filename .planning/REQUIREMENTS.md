@@ -21,9 +21,9 @@
 
 ### EVAL — Evals Surface
 
-- [ ] **EVAL-01**: Each agent run records an entry in the AgentOS evals table (run-level, not just the 48-case suite)
-- [ ] **EVAL-02**: The 48-case eval suite (`evals/`) writes scored results to the AgentOS evals table when run; dashboard shows scores per case
-- [ ] **EVAL-03**: `EVAL_JUDGE_TIER` swap continues to work after the wire-up
+- [x] **EVAL-01**: Each agent run records an entry in the AgentOS evals table (run-level, not just the 48-case suite)
+- [x] **EVAL-02**: The 48-case eval suite (`evals/`) writes scored results to the AgentOS evals table when run; dashboard shows scores per case
+- [x] **EVAL-03**: `EVAL_JUDGE_TIER` swap continues to work after the wire-up
 
 ### KNOW — Knowledge Surface
 
@@ -39,7 +39,7 @@
 
 ### OBS — Observability
 
-- [ ] **OBS-01**: Each of the 4 write paths emits a structured log line (level, path, agent_id, db_id, row_id, latency_ms) on success and on failure
+- [x] **OBS-01**: Each of the 4 write paths emits a structured log line (level, path, agent_id, db_id, row_id, latency_ms) on success and on failure
 - [ ] **OBS-02**: A simple ops doc (or `make check-surfaces`) verifies all 4 surfaces have non-zero rows after a smoke-run
 
 ### MON — worker.monitor Polish
