@@ -155,6 +155,42 @@ python -m ultra_brain --vault vault telos-interview --session 3 --answer "..."
 
 **Writes:** `vault/_system/telos-sessions.json`.
 
+### AgentOS eval rows and live judging
+
+The AgentOS eval surface uses three row shapes:
+
+| Row | `eval_type` | Meaning |
+|-----|-------------|---------|
+| Live parent | `performance` | One metadata-only row for an agent/team run. Name is `live:<agent_id>`, score is `null`, and latency/model/status live in `eval_data`. |
+| Suite case | `accuracy` | One scored row per eval-suite case. Run id is deterministic: `suite:<agent_id>:<case_id>:<git_identity>`. |
+| Live judge child | `agent_as_judge` | Optional async judgment for a live parent row. Child rows link back through `eval_data.parent_run_id`. |
+
+Live judging is disabled by default and never runs on the user-facing response path. Enable only when you are comfortable sending sampled run payloads to the configured judge tier:
+
+```bash
+EVAL_LIVE_JUDGE_ENABLED=true          # default false
+EVAL_LIVE_SAMPLE_RATE=0.05            # default 0.0
+EVAL_LIVE_SAMPLE_RATE_CHAT=0.10       # optional per-agent override
+EVAL_LIVE_MAX_ATTEMPTS=3              # default 3
+EVAL_LIVE_ALLOW_CONTENT_READ=false    # default false; ingest full-content judging requires true
+EVAL_LIVE_MAX_PAYLOAD_CHARS=12000     # default 12000
+```
+
+Worker commands:
+
+```bash
+python -m agentos live-judge --once
+python -m agentos live-judge --once --limit 10
+python -m agentos live-judge --loop --interval 60 --limit 10
+```
+
+Privacy gate behavior:
+
+- Rows with private-key, token, password, secret, authorization, or oversized payload markers are skipped before any judge call.
+- Ingest full-content judging requires `EVAL_LIVE_ALLOW_CONTENT_READ=true`; otherwise only metadata is eligible.
+- Worker failures increment parent `judge_attempts` and retry only up to `EVAL_LIVE_MAX_ATTEMPTS`.
+- Historical `Untitled Evaluation` rows are not migrated, mutated, or deleted in this pass. Only new rows use the corrected semantics.
+
 ---
 
 ## Weekly flows
