@@ -135,6 +135,22 @@ def test_wrap_emits_obs01_schema(caplog):
     assert payload["case_id"] is None
 
 
+def test_wrap_marks_agent_exception_as_error_status():
+    agent, db = _wrap()
+
+    def fail():
+        raise ValueError("agent failed")
+
+    agent._response_factory = fail
+
+    with pytest.raises(ValueError):
+        agent.run("hi")
+
+    rec = db.captured[0]
+    assert rec.eval_data["status"] == "error"
+    assert rec.eval_data["output"] is None
+
+
 def test_wrap_handles_string_model_name():
     agent, db = _wrap(agent=_StubAgent(agent_id="chat"))
     agent._response_factory = lambda: SimpleNamespace(

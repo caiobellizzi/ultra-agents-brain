@@ -41,8 +41,8 @@ class InstrumentedEvalRecorder:
             started = time.monotonic()
             try:
                 response = original_run(*args, **kwargs)
-            except Exception:
-                recorder._record(None, args, kwargs, agent_id, started, error=None)
+            except Exception as exc:
+                recorder._record(None, args, kwargs, agent_id, started, error=exc)
                 raise
             recorder._record(response, args, kwargs, agent_id, started, error=None)
             return response
@@ -51,7 +51,10 @@ class InstrumentedEvalRecorder:
             started = time.monotonic()
             try:
                 response = await original_arun(*args, **kwargs)
-            except Exception:
+            except Exception as exc:
+                await asyncio.to_thread(
+                    recorder._record, None, args, kwargs, agent_id, started, exc
+                )
                 raise
             await asyncio.to_thread(
                 recorder._record, response, args, kwargs, agent_id, started, None
@@ -211,7 +214,8 @@ def patch_classes_for_recording(db: Any) -> None:
                 started = time.monotonic()
                 try:
                     response = orig(self, *args, **kwargs)
-                except Exception:
+                except Exception as exc:
+                    recorder._record(None, args, kwargs, getattr(self, "id", None), started, exc)
                     raise
                 recorder._record(response, args, kwargs, getattr(self, "id", None), started, None)
                 return response
@@ -225,7 +229,19 @@ def patch_classes_for_recording(db: Any) -> None:
 
                 async def _wrapped():
                     started = time.monotonic()
-                    response = await orig(self, *args, **kwargs)
+                    try:
+                        response = await orig(self, *args, **kwargs)
+                    except Exception as exc:
+                        await asyncio.to_thread(
+                            recorder._record,
+                            None,
+                            args,
+                            kwargs,
+                            getattr(self, "id", None),
+                            started,
+                            exc,
+                        )
+                        raise
                     await asyncio.to_thread(
                         recorder._record,
                         response,
