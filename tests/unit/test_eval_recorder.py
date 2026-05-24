@@ -136,7 +136,7 @@ def test_wrap_emits_obs01_schema(caplog):
 
 
 def test_wrap_handles_string_model_name():
-    agent, db = _wrap()
+    agent, db = _wrap(agent=_StubAgent(agent_id="chat"))
     agent._response_factory = lambda: SimpleNamespace(
         run_id="r2",
         content="hello",
@@ -156,7 +156,7 @@ def test_wrap_adds_pending_live_judge_metadata_when_policy_allows(monkeypatch):
     monkeypatch.setenv("EVAL_LIVE_JUDGE_ENABLED", "true")
     monkeypatch.setenv("EVAL_LIVE_SAMPLE_RATE", "1.0")
 
-    agent, db = _wrap()
+    agent, db = _wrap(agent=_StubAgent(agent_id="chat"))
     agent.run("hi")
 
     rec = db.captured[0]

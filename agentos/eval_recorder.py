@@ -24,7 +24,7 @@ class InstrumentedEvalRecorder:
     """Post-run wrapper. Attach to an Agent or Team with .wrap(agent).
 
     Replaces agent.run and agent.arun with closures that call the original
-    then write an EvalRunRecord (eval_type=AGENT_AS_JUDGE, score=null —
+    then write an EvalRunRecord (eval_type=PERFORMANCE, score=null —
     live traffic is metadata-only at write time; suite scoring is plan 12-02).
     """
 
@@ -86,7 +86,7 @@ class InstrumentedEvalRecorder:
             row_id=record.run_id if status == "ok" else None,
             latency_ms=latency_ms,
             status=status,
-            eval_type=EvalType.AGENT_AS_JUDGE.value,
+            eval_type=record.eval_type.value,
             model_provider=record.model_provider,
             model_id=record.model_id,
             score=None,
@@ -98,27 +98,39 @@ class InstrumentedEvalRecorder:
     def _build_eval_record(self, response, args, kwargs, agent_id, latency_ms, error) -> EvalRunRecord:
         run_id = getattr(response, "run_id", None) or str(uuid.uuid4())
         model_id, model_provider = self._extract_model(response)
+        eval_data = {
+            "output": self._dump_output(response),
+            "latency_ms": latency_ms,
+            "model_id": model_id,
+            "model_provider": model_provider,
+            "status": "ok" if error is None else "error",
+            "score": None,
+        }
+        eval_input = self._extract_input(args, kwargs)
+        self._add_live_judge_metadata(
+            eval_data=eval_data,
+            eval_input=eval_input,
+            agent_id=agent_id,
+            run_id=run_id,
+        )
         return EvalRunRecord(
             run_id=run_id,
-            eval_type=EvalType.AGENT_AS_JUDGE,
+            eval_type=EvalType.PERFORMANCE,
             agent_id=agent_id,
+            name=f"live:{agent_id}",
+            evaluated_component_name=agent_id,
             model_id=model_id,
             model_provider=model_provider,
-            eval_input=self._extract_input(args, kwargs),
-            eval_data={
-                "output": self._dump_output(response),
-                "latency_ms": latency_ms,
-                "model_id": model_id,
-                "model_provider": model_provider,
-                "status": "ok" if error is None else "error",
-                "score": None,
-            },
+            eval_input=eval_input,
+            eval_data=eval_data,
         )
 
     def _extract_model(self, response) -> tuple[Optional[str], Optional[str]]:
         model = getattr(response, "model", None)
         if model is None:
             return None, None
+        if isinstance(model, str):
+            return model, None
         return getattr(model, "id", None), getattr(model, "provider", None)
 
     def _extract_input(self, args, kwargs) -> dict:
@@ -136,6 +148,25 @@ class InstrumentedEvalRecorder:
         if hasattr(content, "model_dump"):
             return content.model_dump()
         return content
+
+    def _add_live_judge_metadata(self, *, eval_data, eval_input, agent_id, run_id) -> None:
+        try:
+            from agentos.eval_live_policy import EvalLivePolicy
+        except Exception:
+            return
+
+        policy = EvalLivePolicy.from_env()
+        decision = policy.judge_decision(
+            agent_id=agent_id,
+            run_id=run_id,
+            eval_input=eval_input,
+            eval_data=eval_data,
+        )
+        if not decision.eligible:
+            return
+        eval_data["judge_status"] = "pending"
+        eval_data["judge_attempts"] = 0
+        eval_data["judge_rubric_ids"] = list(decision.rubric_ids)
 
     def _emit(self, **fields) -> None:
         record = {"path": "eval"}
