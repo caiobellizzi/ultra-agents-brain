@@ -8,6 +8,7 @@ run without a live Postgres connection.
 """
 import json
 import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -77,7 +78,6 @@ def eval_db():
 
 import json as _json
 import logging as _logging
-import uuid as _uuid
 from typing import Any as _Any
 
 from sqlalchemy.exc import IntegrityError as _IntegrityError
@@ -90,7 +90,7 @@ _eval_log.setLevel(_logging.INFO)
 
 @pytest.fixture(scope="session")
 def eval_test_run_id() -> str:
-    return f"suite-{_uuid.uuid4()}"
+    return _git_identity()
 
 
 @pytest.fixture
@@ -100,16 +100,92 @@ def eval_recorder(request, eval_test_run_id):
     writes a row when eval_db is set."""
     captured: dict = {}
 
-    def record(score: float, output: _Any, eval_input: dict, *, case_id=None, agent_id=None) -> None:
+    def record(
+        score: float,
+        output: _Any,
+        eval_input: dict,
+        *,
+        case_id=None,
+        agent_id=None,
+        model_id=None,
+        model_provider=None,
+    ) -> None:
         captured["score"] = score
         captured["output"] = output
         captured["eval_input"] = eval_input
-        captured["run_id"] = f"{eval_test_run_id}-{request.node.nodeid}"
         captured["case_id"] = case_id
         captured["agent_id"] = agent_id
+        captured["git_identity"] = eval_test_run_id
+        captured["model_id"] = model_id
+        captured["model_provider"] = model_provider
 
     request.node.captured_eval = captured
     return record
+
+
+_EVAL_RELEVANT_PATHS = ("agentos", "evals", "tests", "ultra_brain", "skills")
+
+
+def _suite_run_id(agent_id: str, case_id: str, git_identity: str) -> str:
+    return f"suite:{agent_id}:{case_id}:{git_identity}"
+
+
+def _git_identity(repo_root: Path | str | None = None) -> str:
+    root = Path(repo_root or Path.cwd())
+    head = _git_output(root, ["rev-parse", "--short=12", "HEAD"]) or "no-head"
+    dirty_hash = _dirty_eval_hash(root)
+    if dirty_hash:
+        return f"{head}+dirty:{dirty_hash}"
+    return head
+
+
+def _dirty_eval_hash(repo_root: Path) -> str | None:
+    status = _git_output(
+        repo_root,
+        ["status", "--porcelain=v1", "--untracked-files=all", "--", *_EVAL_RELEVANT_PATHS],
+    )
+    if not status:
+        return None
+
+    import hashlib
+
+    digest = hashlib.sha256()
+    digest.update(status.encode())
+    for args in (
+        ["diff", "--binary", "--", *_EVAL_RELEVANT_PATHS],
+        ["diff", "--cached", "--binary", "--", *_EVAL_RELEVANT_PATHS],
+    ):
+        diff = _git_output(repo_root, args)
+        digest.update(diff.encode())
+
+    for path in _untracked_paths(status):
+        full_path = repo_root / path
+        if full_path.is_file():
+            digest.update(path.encode())
+            digest.update(full_path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+def _untracked_paths(status: str) -> list[str]:
+    paths: list[str] = []
+    for line in status.splitlines():
+        if line.startswith("?? "):
+            paths.append(line[3:])
+    return paths
+
+
+def _git_output(repo_root: Path, args: list[str]) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return ""
+    return completed.stdout.strip()
 
 
 def _emit_obs01(*, status: str, eval_type: str, run_id, error_type=None, error_msg=None, **extras) -> None:
@@ -154,6 +230,8 @@ def _record_eval_row(
         run_id=run_id,
         eval_type=_EvalType.ACCURACY,
         agent_id=agent_id,
+        name=f"eval-suite:{agent_id}:{case_id}",
+        evaluated_component_name=agent_id,
         model_id=model_id,
         model_provider=model_provider,
         eval_input=eval_input,
@@ -221,12 +299,16 @@ def pytest_runtest_makereport(item, call):
         captured.get("agent_id")
         or item.nodeid.split("::")[0].split("/")[-1].replace("test_", "").replace(".py", "")
     )
+    case_id = captured.get("case_id") or item.nodeid
+    run_id = _suite_run_id(agent_id, case_id, captured.get("git_identity") or _git_identity())
     _record_eval_row(
         eval_db_val,
-        run_id=captured["run_id"],
+        run_id=run_id,
         agent_id=agent_id,
-        case_id=captured.get("case_id"),
+        case_id=case_id,
         score=captured["score"],
         output=captured["output"],
         eval_input=captured["eval_input"],
+        model_id=captured.get("model_id"),
+        model_provider=captured.get("model_provider"),
     )
