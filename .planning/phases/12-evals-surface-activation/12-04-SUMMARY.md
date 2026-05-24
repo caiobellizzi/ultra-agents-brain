@@ -85,6 +85,7 @@ completed: 2026-05-24
 4. **Task 4: Shared rubrics, policy helpers, and privacy gates** - `0a28c14` (`fix`)
 5. **Task 5: Live judge worker and CLI** - `a3b1cee` (`feat`)
 6. **Task 6: Docs and verification** - `4245cc8` (`docs`)
+7. **Code review fix: Failed live-run status** - `4c0c417` (`fix`)
 
 ## Files Created/Modified
 
@@ -116,7 +117,7 @@ None - plan executed exactly as written.
 
 ## Verification
 
-- `PYTHONPATH=. .venv/bin/pytest tests/unit/test_eval_recorder.py tests/unit/test_eval_suite_hook.py tests/unit/test_eval_live_policy.py tests/unit/test_live_judge.py -q` - passed, 19 tests.
+- `PYTHONPATH=. .venv/bin/pytest tests/unit/test_eval_recorder.py tests/unit/test_eval_suite_hook.py tests/unit/test_eval_live_policy.py tests/unit/test_live_judge.py -q` - passed, 20 tests after code-review fix.
 - `PYTHONPATH=. .venv/bin/pytest evals/ --collect-only -q` - passed, 48 tests collected.
 - `PYTHONPATH=. .venv/bin/pytest evals/ -q -m "not live"` - passed, 48 tests.
 - `PYTHONPATH=. .venv/bin/python -m py_compile agentos/live_judge.py agentos/__main__.py` - passed.
@@ -135,7 +136,7 @@ Phase 12 eval-row semantics are corrected for new rows. The verifier should trea
 ## Self-Check: PASSED
 
 - Created files exist: `agentos/eval_rubrics.py`, `agentos/eval_live_policy.py`, `agentos/live_judge.py`, `tests/unit/test_eval_live_policy.py`, `tests/unit/test_live_judge.py`.
-- Plan commits exist in git history: `eef8578`, `2a7bd5a`, `b01c540`, `0a28c14`, `a3b1cee`, `4245cc8`.
+- Plan commits exist in git history: `eef8578`, `2a7bd5a`, `b01c540`, `0a28c14`, `a3b1cee`, `4245cc8`, `4c0c417`.
 - Focused plan verification and eval smoke gates passed.
 - Remaining `make test` failures are documented as out-of-scope in `deferred-items.md`.
 
