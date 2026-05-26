@@ -13,7 +13,7 @@ from .lint import write_lint_report
 from .monitor import run_poll
 from .query import query_vault
 from .research import aggregate_research, plan_research, worker_summary
-from .review import write_weekly_review
+from .review import write_weekly_review, weekly_review_draft, send_weekly_review_telegram
 from .telos import TelosSessionStore, score_alignment
 from .vault import ensure_vault
 
@@ -60,7 +60,8 @@ def _parser() -> argparse.ArgumentParser:
     bluesky_p.add_argument("--handles", default="skills/worker.monitor/bluesky-handles.txt", help="Path to handles file (one per line)")
     bluesky_p.add_argument("--limit", type=int, default=10, help="Max posts per handle")
 
-    sub.add_parser("review")
+    review_p = sub.add_parser("review")
+    review_p.add_argument("--dry-run", action="store_true", help="Print draft without sending Telegram")
 
     daily_b = sub.add_parser("daily-brief")
     daily_b.add_argument("--date", default=None, help="YYYY-MM-DD override (default: today)")
@@ -147,8 +148,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "review":
-        report = write_weekly_review(vault)
-        print(f"Weekly review written to {report}")
+        if args.dry_run:
+            draft, sweep_id = weekly_review_draft(vault)
+            print(draft)
+            print(f"\n[DRY RUN] sweep_id={sweep_id} — no Telegram message sent.")
+        else:
+            send_weekly_review_telegram(vault)
+            print("Weekly review sent to Telegram with HITL buttons.")
         return 0
 
     if args.command == "daily-brief":
