@@ -122,6 +122,38 @@ See `phases/13-knowledge-surface-activation/13-VERIFICATION.md` for full evidenc
 
 Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bidirectional sync, X/Twitter + LinkedIn ingestion in worker.monitor.
 
+### 📋 v2.5 — Brain Vault Overhaul
+
+**Goal:** Turn the Obsidian second brain from a read-it-later pile into a genuine leverage multiplier — TELOS-scored ingestion, spec-driven shipping from brain, and automated hygiene loops.
+
+| #  | Phase                  | Goal                                                                   |
+|----|------------------------|------------------------------------------------------------------------|
+| 16 | Brain Vault Overhaul   | TELOS filled · inbox swept · operating manual · spec bridge · auto-loops |
+
+**Phases:** 1 phase · Plans: 16-01, 16-02, 16-03, 16-04
+
+#### Phase 16: Brain Vault Overhaul
+
+**Goal:** Fill TELOS, clean inbox, write operating manual, build brain→SPEC.md generator, wire automation loops (daily triage, weekly review, monthly TELOS recheck, project-mirror sync).
+
+**Gate:** Execute after v2.0 Phase 15 closes.
+
+**Plans:**
+- 16-01 (Wave 1): Fill TELOS — write mission/goals/values/dont-do; flip status to active
+- 16-02 (Wave 2): Inbox sweep (scripts/inbox_sweep.py) + write _system/operating-manual.md
+- 16-03 (Wave 3): Graph bridge (reindex_bridge.sh) + Brief→SPEC.md generator (spec_gen.py)
+- 16-04 (Wave 4): Automation loops — daily triage, weekly review HITL, project-mirror sync
+
+**Success criteria:**
+1. `ultra_brain telos` reports TELOS `active` with all four sub-docs non-empty.
+2. `Inbox/` contains only MOC.md and README.md after sweep; all original items are archived or promoted.
+3. `_system/operating-manual.md` exists, scannable in <5 min, contains cadence table and spec checklist.
+4. codebase-memory-mcp reindexes on git commit; `vault/repos/<repo>/ARCHITECTURE.md` written after reindex.
+5. One SPEC.md generated from brain and accepted by ultra-workshop `/build` on a real feature.
+6. All four automation loops produce their expected artifact when triggered.
+
+---
+
 ### 📋 v3.0 — ultra-workshop
 
 Separate repo. Agno orchestrator + OpenHands coder sandbox. Reads from Brain via HTTP. Begins only after v2.0 has been running daily for 2–4 weeks.
