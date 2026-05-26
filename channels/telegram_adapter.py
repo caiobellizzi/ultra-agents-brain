@@ -104,33 +104,61 @@ def _format_tool_args(args: dict) -> str:
     return ", ".join(parts)
 
 
+def _response_content(agent_response: dict) -> Any:
+    """Return the non-empty response body from current or legacy AgentOS payloads."""
+    for key in ("content", "output"):
+        if key in agent_response and agent_response[key] not in (None, "", {}, []):
+            return agent_response[key]
+    if "content" in agent_response:
+        return agent_response["content"]
+    return agent_response.get("output", {})
+
+
 def extract_reply_text(agent_response: dict) -> str:
     """Extract human-readable text from typed agent response."""
-    output = agent_response.get("output", {})
+    output = _response_content(agent_response)
 
     if isinstance(output, dict):
         # ChatReply / QueryAnswer
-        if "text" in output:
-            return output["text"]
-        if "answer" in output:
-            return output["answer"]
+        for field in ("text", "answer", "response"):
+            value = output.get(field)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
         # ResearchReport
         if "findings" in output:
-            findings = output["findings"]
-            text = "\n".join(f"• {f['summary']}" for f in findings[:5])
+            findings = output.get("findings") or []
+            summaries = [
+                f.get("summary", "") for f in findings[:5]
+                if isinstance(f, dict) and f.get("summary")
+            ]
+            text = "\n".join(f"• {summary}" for summary in summaries)
             if output.get("next_questions"):
                 text += "\n\nNext questions:\n" + "\n".join(
                     f"• {q}" for q in output["next_questions"][:3]
                 )
-            return text
+            if text.strip():
+                return text.strip()
         # CuratorResult / IngestResult — not user-facing in Telegram
         if "note_path" in output:
             return f"Ingested → {output['note_path']}"
-        if "actions_taken" in output:
+        if output.get("actions_taken"):
             return f"Done: {', '.join(output['actions_taken'][:3])}"
 
-    # Fallback: stringify whatever we got
-    return str(output)
+    if isinstance(output, str):
+        return output.strip()
+    if output in (None, {}, []):
+        return ""
+
+    # Fallback: stringify whatever non-empty shape we got
+    return json.dumps(output, ensure_ascii=False) if isinstance(output, (dict, list)) else str(output)
+
+
+def extract_citations(agent_response: dict) -> list[dict]:
+    output = _response_content(agent_response)
+    if isinstance(output, dict) and isinstance(output.get("citations"), list):
+        return output["citations"]
+    citations = agent_response.get("citations")
+    return citations if isinstance(citations, list) else []
 
 
 def format_citations(citations: list[dict]) -> str:
@@ -349,12 +377,36 @@ async def route_message(
         await send_approval_buttons(client, chat_id, run_id, agent_id, requirements)
     else:
         reply = extract_reply_text(payload)
-        output = payload.get("output", {})
-        if isinstance(output, dict):
-            citations = output.get("citations", [])
-            if citations:
-                reply += format_citations(citations)
+        if not reply:
+            log.warning("AgentOS run payload had empty reply; keys=%s", list(payload.keys()))
+            reply = "AgentOS completed but returned no reply text."
+        citations = extract_citations(payload)
+        if citations:
+            reply += format_citations(citations)
         await send_message(client, chat_id, reply)
+
+
+async def _handle_review_sweep_callback(
+    client: httpx.AsyncClient,
+    chat_id: int,
+    data: str,
+) -> None:
+    """Handle review_sweep:apply:{sweep_id} and review_sweep:skip:{sweep_id} callbacks."""
+    from ultra_brain.review import apply_pending_sweep, cancel_pending_sweep
+
+    parts = data.split(":", 2)
+    if len(parts) != 3:
+        log.warning("Malformed review_sweep callback: %s", data)
+        return
+    _, action, sweep_id = parts
+    if action == "apply":
+        count = apply_pending_sweep(sweep_id)
+        await send_message(client, chat_id, f"✅ Sweep applied — {count} file(s) moved.")
+    elif action == "skip":
+        cancel_pending_sweep(sweep_id)
+        await send_message(client, chat_id, "🔍 Sweep deferred to next week.")
+    else:
+        log.warning("Unknown review_sweep action: %s", action)
 
 
 async def handle_callback(
@@ -372,6 +424,11 @@ async def handle_callback(
 
     # Acknowledge immediately so the spinner clears
     await tg_post(client, "answerCallbackQuery", callback_query_id=callback_id)
+
+    # Weekly review sweep (separate from Agno HITL flow)
+    if data.startswith("review_sweep:"):
+        await _handle_review_sweep_callback(client, chat_id, data)
+        return
 
     parts = data.split(":")
     if len(parts) != 4:

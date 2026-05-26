@@ -33,3 +33,41 @@ def send_message(text: str, *, chat_id: str | None = None) -> None:
         ssl_ctx = ssl.create_default_context()
     with urllib.request.urlopen(req, context=ssl_ctx) as resp:
         resp.read()
+
+
+def send_message_with_buttons(
+    text: str,
+    buttons: list[tuple[str, str]],
+    *,
+    chat_id: str | None = None,
+) -> None:
+    """Send a Telegram message with a row of inline keyboard buttons.
+
+    buttons: list of (label, callback_data) pairs rendered as a single row.
+    """
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    if not token:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN not set")
+    if chat_id is None:
+        chat_id = os.getenv("TELEGRAM_ALERT_CHAT_ID", "")
+    if not chat_id:
+        raise RuntimeError("TELEGRAM_ALERT_CHAT_ID not set")
+
+    keyboard = {"inline_keyboard": [[{"text": label, "callback_data": cb} for label, cb in buttons]]}
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = json.dumps({
+        "chat_id": chat_id,
+        "text": text[:4096],
+        "parse_mode": "Markdown",
+        "reply_markup": keyboard,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        import certifi
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        ssl_ctx = ssl.create_default_context()
+    with urllib.request.urlopen(req, context=ssl_ctx) as resp:
+        resp.read()
