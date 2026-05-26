@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 import ssl
 import sys
 import urllib.parse
@@ -165,11 +164,15 @@ def run_poll(
         if item_score >= 0.6:
             articles_dir = vault_root / "02-Resources" / "articles"
             articles_dir.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(dest), str(articles_dir / filename))
+            final_dest = articles_dir / filename
+            final_dest.write_bytes(dest.read_bytes())
+            dest.unlink()
         elif item_score < 0.3:
             culled_dir = vault_root / "03-Archives" / "auto-culled"
             culled_dir.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(dest), str(culled_dir / filename))
+            final_dest = culled_dir / filename
+            final_dest.write_bytes(dest.read_bytes())
+            dest.unlink()
 
     append_log(
         log_path,
