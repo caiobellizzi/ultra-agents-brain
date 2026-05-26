@@ -13,6 +13,7 @@ from .lint import write_lint_report
 from .monitor import run_poll
 from .query import query_vault
 from .research import aggregate_research, plan_research, worker_summary
+from .monthly_telos import monthly_telos_recheck
 from .review import write_weekly_review, weekly_review_draft, send_weekly_review_telegram
 from .telos import TelosSessionStore, score_alignment
 from .vault import ensure_vault
@@ -62,6 +63,9 @@ def _parser() -> argparse.ArgumentParser:
 
     review_p = sub.add_parser("review")
     review_p.add_argument("--dry-run", action="store_true", help="Print draft without sending Telegram")
+
+    monthly_p = sub.add_parser("monthly-telos-recheck")
+    monthly_p.add_argument("--no-telegram", action="store_true", help="Skip Telegram notification")
 
     daily_b = sub.add_parser("daily-brief")
     daily_b.add_argument("--date", default=None, help="YYYY-MM-DD override (default: today)")
@@ -155,6 +159,12 @@ def main(argv: list[str] | None = None) -> int:
         else:
             send_weekly_review_telegram(vault)
             print("Weekly review sent to Telegram with HITL buttons.")
+        return 0
+
+    if args.command == "monthly-telos-recheck":
+        results = monthly_telos_recheck(vault, send_telegram=not args.no_telegram)
+        drifting = [r for r in results if r["drifting"]]
+        print(f"Monthly TELOS recheck: {len(results)} projects checked, {len(drifting)} drifting")
         return 0
 
     if args.command == "daily-brief":
