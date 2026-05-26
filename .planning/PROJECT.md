@@ -151,4 +151,6 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-24 — Phase 12 eval-row semantics corrected*
+**Phase 16 complete (2026-05-26):** Brain Vault Overhaul — TELOS filled, inbox sweep operational (write_bytes+unlink iCloud fix), operating manual written, SPEC.md generator functional, all 4 automation loops wired (daily triage, weekly review HITL, monthly TELOS recheck, workshop registry vault mirror). 3 human UAT items tracked in 16-HUMAN-UAT.md. Phase 16 is the last phase of v2.0 milestone.
+
+*Last updated: 2026-05-26 — Phase 16 Brain Vault Overhaul complete*
