@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import ssl
 import sys
 import urllib.parse
@@ -146,13 +147,29 @@ def run_poll(
     inbox_dir.mkdir(parents=True, exist_ok=True)
     log_path = system_dir / "log.md"
 
+    from .telos_score import score_telos_relevance
+
     for item in new_items:
         filename = f"{today}-{slugify(item.title)}.md"
         dest = inbox_dir / filename
-        content = f"# {item.title}\n\nsource:: {item.url}\n"
+        item_score = score_telos_relevance(title=item.title, body=item.url)
+        content = (
+            f"---\ntitle: {json.dumps(item.title)}\nsource: {item.url}\n"
+            f"published: {item.published or ''}\ntelos_relevance: {item_score:.2f}\n---\n\n"
+            f"# {item.title}\n\nsource:: {item.url}\n"
+        )
         if item.published:
             content += f"published:: {item.published}\n"
         dest.write_text(content, encoding="utf-8")
+
+        if item_score >= 0.6:
+            articles_dir = vault_root / "02-Resources" / "articles"
+            articles_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(dest), str(articles_dir / filename))
+        elif item_score < 0.3:
+            culled_dir = vault_root / "03-Archives" / "auto-culled"
+            culled_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(dest), str(culled_dir / filename))
 
     append_log(
         log_path,
