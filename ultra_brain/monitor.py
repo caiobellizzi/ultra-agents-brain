@@ -167,12 +167,16 @@ def run_poll(
             final_dest = articles_dir / filename
             final_dest.write_bytes(dest.read_bytes())
             dest.unlink()
+            if dest.exists():
+                raise RuntimeError(f"iCloud unlink failed for {dest.name} — manual cleanup required")
         elif item_score < 0.3:
             culled_dir = vault_root / "03-Archives" / "auto-culled"
             culled_dir.mkdir(parents=True, exist_ok=True)
             final_dest = culled_dir / filename
             final_dest.write_bytes(dest.read_bytes())
             dest.unlink()
+            if dest.exists():
+                raise RuntimeError(f"iCloud unlink failed for {dest.name} — manual cleanup required")
 
     append_log(
         log_path,

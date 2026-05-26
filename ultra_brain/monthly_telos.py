@@ -32,7 +32,17 @@ def monthly_telos_recheck(
     for entry in projects_dir.iterdir():
         if not entry.is_dir():
             continue
-        check = score_alignment(entry.name, telos_root)
+        # Build a richer action string: dir name + README or first .md content
+        # Using only the directory name produces too-short text for reliable keyword scoring
+        action_parts = [entry.name]
+        readme = entry / "README.md"
+        if readme.exists():
+            action_parts.append(readme.read_text(encoding="utf-8", errors="ignore")[:400])
+        else:
+            for md_file in sorted(entry.glob("*.md"))[:3]:
+                action_parts.append(md_file.read_text(encoding="utf-8", errors="ignore")[:200])
+        action_text = " ".join(action_parts)
+        check = score_alignment(action_text, telos_root)
         results.append(
             {
                 "project": entry.name,
