@@ -87,3 +87,10 @@ agent_os = AgentOS(
 )
 
 app = agent_os.get_app()
+
+# Localhost-only route for the Workshop pipeline to persist its repo registry.
+# The registry lives in the vault's _system/ dir (owned by uabrain); the
+# Workshop (uws) cannot write there, so it PUTs the computed document here.
+from agentos.workshop_registry import register_workshop_routes
+
+register_workshop_routes(app)

@@ -119,6 +119,7 @@ Key variables:
 | `TELEGRAM_BOT_TOKEN` | — | Telegram bot token for the channel adapter |
 | `TELEGRAM_ALLOWED_CHAT_IDS` | — | Comma-separated list of allowed Telegram chat IDs |
 | `SECOND_BRAIN_DIR` | Yes | Path to the local Markdown vault |
+| `WORKSHOP_REPO_REGISTRY` | — | Path to the Workshop repo registry JSON persisted via the localhost `PUT /workshop/repos` route (default: `/srv/second-brain/_system/workshop-repos.json`) |
 | `COST_LEDGER` | Yes | Path to the cost ledger Markdown file |
 | `DAILY_COST_CAP_USD` | Yes | Hard daily spending cap in USD (default: `20`) |
 
