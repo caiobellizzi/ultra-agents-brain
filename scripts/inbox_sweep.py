@@ -330,16 +330,21 @@ def sweep(vault_root: Path, *, dry_run: bool = False) -> int:
                     fm = re.sub(r"para_tier:\s*.*", "para_tier: 02-Resources", fm)
                     fm = re.sub(r"status:\s*.*", "status: ingested", fm)
                     item.write_text("---" + fm + "---" + rest, encoding="utf-8")
+                    _ = item.read_bytes()  # force iCloud flush before copy
 
             dest = _unique_dest(promote_dir / item.name)
             dest.write_bytes(item.read_bytes())
             item.unlink()
+            if item.exists():
+                raise RuntimeError(f"iCloud unlink failed for {item.name} — manual cleanup required")
             promoted_names.append(item.name)
         else:
             # Archive: move as-is (do NOT modify content)
             dest = _unique_dest(archive_dir / item.name)
             dest.write_bytes(item.read_bytes())
             item.unlink()
+            if item.exists():
+                raise RuntimeError(f"iCloud unlink failed for {item.name} — manual cleanup required")
             archived_names.append(item.name)
 
     print()
