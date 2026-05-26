@@ -58,13 +58,21 @@ def write_weekly_review(vault_root: Path) -> Path:
 # Weekly review draft + Telegram HITL
 # ---------------------------------------------------------------------------
 
+import json
 import re
 import shutil
+import tempfile
 import uuid
 from datetime import date
+from pathlib import Path as _Path
 
 # Pending sweeps keyed by sweep_id: {"vault_root": str, "promote": [...], "archive": [...]}
+# Also persisted to /tmp so the adapter process can load them after the CLI exits.
 _PENDING_SWEEPS: dict[str, dict] = {}
+
+
+def _sweep_file(sweep_id: str) -> _Path:
+    return _Path(tempfile.gettempdir()) / f"ultra-brain-sweep-{sweep_id}.json"
 
 
 def _read_inbox_items(vault_root: Path) -> list[dict]:
@@ -134,11 +142,13 @@ def weekly_review_draft(vault_root: Path) -> tuple[str, str]:
     )
 
     sweep_id = uuid.uuid4().hex[:12]
-    _PENDING_SWEEPS[sweep_id] = {
+    payload = {
         "vault_root": str(vault_root),
         "promote": [str(i["path"]) for i in promotions],
         "archive": [str(i["path"]) for i in archives],
     }
+    _PENDING_SWEEPS[sweep_id] = payload
+    _sweep_file(sweep_id).write_text(json.dumps(payload), encoding="utf-8")
     return "\n".join(lines), sweep_id
 
 
@@ -146,7 +156,12 @@ def apply_pending_sweep(sweep_id: str) -> int:
     """Apply the pending sweep for sweep_id. Returns number of files moved."""
     pending = _PENDING_SWEEPS.pop(sweep_id, None)
     if not pending:
-        return 0
+        f = _sweep_file(sweep_id)
+        if f.exists():
+            pending = json.loads(f.read_text(encoding="utf-8"))
+        else:
+            return 0
+    _sweep_file(sweep_id).unlink(missing_ok=True)
     vault_root = Path(pending["vault_root"])
     count = 0
     articles_dir = vault_root / "02-Resources" / "articles"
@@ -168,6 +183,7 @@ def apply_pending_sweep(sweep_id: str) -> int:
 
 def cancel_pending_sweep(sweep_id: str) -> None:
     _PENDING_SWEEPS.pop(sweep_id, None)
+    _sweep_file(sweep_id).unlink(missing_ok=True)
 
 
 def send_weekly_review_telegram(vault_root: Path, *, chat_id: str | None = None) -> None:

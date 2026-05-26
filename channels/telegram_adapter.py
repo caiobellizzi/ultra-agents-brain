@@ -275,6 +275,7 @@ UTILITY_HELP = (
     "/brief — generate today's daily brief\n"
     "/monitor — poll RSS feeds now\n"
     "/bluesky — poll Bluesky handles now\n"
+    "/review — send weekly brain review (with HITL buttons)\n"
     "/help — show this list"
 )
 
@@ -328,6 +329,14 @@ async def route_message(
     cmd_word = first_word.split("@")[0]  # strip @botname suffix
     if cmd_word == "/help" or cmd_word == "/start":
         await send_message(client, chat_id, UTILITY_HELP)
+        return
+    if cmd_word == "/review":
+        from pathlib import Path as _Path
+        from ultra_brain.review import send_weekly_review_telegram
+        await send_message(client, chat_id, "⏳ Generating weekly brain review...")
+        await asyncio.to_thread(
+            send_weekly_review_telegram, _Path(UAB_VAULT), chat_id=str(chat_id)
+        )
         return
     if cmd_word in UTILITY_COMMANDS:
         await _handle_utility_command(client, chat_id, UTILITY_COMMANDS[cmd_word], cmd_word)
