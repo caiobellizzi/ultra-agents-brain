@@ -95,6 +95,13 @@ See `phases/13-knowledge-surface-activation/13-VERIFICATION.md` for full evidenc
 
 **Requirements:** APPR-01, APPR-02, APPR-03, OBS-01 (approval path)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — approval_recorder.py DB instrumentation + OBS-01 logging (TDD)
+- [ ] 14-02-PLAN.md — Telegram row-resolution bridge _resolve_approval_row (TDD)
+- [ ] 14-03-PLAN.md — VPS live verification + VERIFICATION.md
+
 **Success criteria:**
 1. A tool call gated by `trust_gate` creates an approval row visible in the AgentOS approvals list.
 2. Approving/rejecting via Telegram inline button flips the AgentOS approval row state (pending → approved/rejected) within 2 seconds.
