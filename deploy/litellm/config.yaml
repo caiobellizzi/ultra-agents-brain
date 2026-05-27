@@ -149,10 +149,9 @@ litellm_settings:
     - orchestrator-failover: ["cloud-sonnet"]
     - research-worker: ["research-worker-failover", "cloud-sonnet"]
     - research-worker-failover: ["cloud-sonnet"]
-    - default-worker: ["default-worker-nim", "default-worker-nim-failover", "cloud-groq"]
-    - default-worker-nim: ["default-worker-nim-failover", "cloud-groq"]
-    - default-worker-nim-failover: ["cloud-groq"]
-    - private-worker: ["cheap-worker", "default-worker-nim", "cloud-groq"]
+    - default-worker: ["default-worker-nim", "default-worker-nim-failover"]
+    - default-worker-nim: ["default-worker-nim-failover"]
+    - private-worker: ["cheap-worker", "default-worker-nim"]
   context_window_fallbacks:
     - default-worker: ["research-worker"]
     - orchestrator: ["research-worker"]
