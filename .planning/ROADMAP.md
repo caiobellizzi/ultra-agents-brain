@@ -164,7 +164,7 @@ Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bi
 | #  | Phase                        | Goal                                                                        | Requirements                              |
 |----|------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 | 17 | 1/1 | Complete   | 2026-05-27 |
-| 18 | 0/2 | In progress | SYNC-01–SYNC-05 |
+| 18 | 2/2 | Complete   | 2026-05-27 |
 
 **Phase 17: Multi-Repo Brain Pipelines**
 

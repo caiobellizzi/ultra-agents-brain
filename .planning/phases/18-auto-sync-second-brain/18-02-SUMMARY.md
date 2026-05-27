@@ -24,7 +24,7 @@ metrics:
   duration: "~5 minutes"
   completed: "2026-05-27"
   tasks_total: 4
-  tasks_completed: 3
+  tasks_completed: 4
   files_created: 1
   files_modified: 1
 ---
@@ -42,7 +42,7 @@ flock-guarded `reindex-vault.sh` wrapper with conditional trigger in `git-sync.s
 | 18-02-A | Create scripts/reindex-vault.sh | 2761845 | Done |
 | 18-02-B | Extend git-sync.sh pull branch with BEFORE/AFTER + reindex trigger | 2761845 | Done |
 | 18-02-C | Commit both scripts | 2761845 | Done |
-| 18-02-D | Deploy to VPS and verify end-to-end | — | Awaiting human (checkpoint) |
+| 18-02-D | Deploy to VPS and verify end-to-end | 60df50b, ecdad1b | Done |
 
 ## What Was Built
 
@@ -59,9 +59,21 @@ flock-guarded `reindex-vault.sh` wrapper with conditional trigger in `git-sync.s
 - Only invokes `reindex-vault.sh` when `BEFORE != AFTER` AND `git diff --name-only` includes at least one `.md` file
 - No-op pulls (nothing fetched, or only non-.md files changed) skip reindex entirely
 
+## VPS Deploy & Smoke Test Results
+
+Scripts deployed via scp to `/opt/ultra-agents-brain/scripts/`. Two post-deploy fixes required:
+
+- **`60df50b`** — `cd "$APP_DIR"` before flock: `agentos` is a local module in `/opt/ultra-agents-brain/`, not a pip package
+- **`ecdad1b`** — `set -a` / `set +a` around `.env` source: bare assignments aren't inherited by flock subprocess, so `POSTGRES_DSN_KNOWLEDGE` wasn't reaching Python
+
+Smoke tests (all passed):
+- ✓ Reindex triggered on `.md` change: sentinel commit pushed to GitHub → `git-sync.sh pull` → `repos/ultra-agents-brain.md` indexed in 0.78s
+- ✓ Concurrency guard: "another reindex in progress; skipping" logged, exit 0
+- ✓ Full log entry: `[indexed] repos/ultra-agents-brain.md`, `Indexed 1 files (1554 skipped, 0 errors)`
+
 ## Deviations from Plan
 
-None — plan executed exactly as written.
+Two fixes required during VPS deploy (see above). Core design unchanged.
 
 ## Known Stubs
 
