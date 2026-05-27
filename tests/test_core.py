@@ -42,6 +42,22 @@ class CoreTest(unittest.TestCase):
             self.assertIn("Prompt Caching", answer)
             self.assertIn("Evidence-backed answer", answer)
 
+    def test_query_skips_unreadable_files_without_crashing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            vault = Path(tmp) / "vault"
+            ensure_vault(vault)
+            (vault / "readable.md").write_text("# Topic\n\nVisible vault content here.", encoding="utf-8")
+            unreadable = vault / "locked.md"
+            unreadable.write_text("# Hidden\n\nUnreadable content.", encoding="utf-8")
+            unreadable.chmod(0o000)
+            try:
+                answer = query_vault("visible vault content", vault, prefer_qmd=False)
+            finally:
+                unreadable.chmod(0o600)
+            self.assertIn("Evidence-backed answer", answer)
+            self.assertIn("readable.md", answer)
+            self.assertNotIn("locked.md", answer)
+
     def test_cost_gate_warns_and_refuses_at_limits(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             ledger = CostLedger(Path(tmp) / "cost-ledger.md", limits={"per_day_total": 1.0, "warn_at_pct": 0.8})

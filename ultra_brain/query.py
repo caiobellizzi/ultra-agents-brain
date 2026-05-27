@@ -35,7 +35,7 @@ class RipgrepRetriever:
                 continue
             try:
                 lines = path.read_text(encoding="utf-8").splitlines()
-            except UnicodeDecodeError:
+            except (UnicodeDecodeError, OSError):
                 continue
             for idx, line in enumerate(lines, start=1):
                 lower = line.lower()
