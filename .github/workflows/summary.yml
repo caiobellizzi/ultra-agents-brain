@@ -1,0 +1,9 @@
+name: Brain Summary
+on:
+  schedule: [{cron: "0 2 * * *"}]
+  workflow_dispatch:
+jobs:
+  summarize:
+    uses: caiobellizzi/brain-pipelines/.github/workflows/generate-summary.yml@v1
+    secrets:
+      NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
