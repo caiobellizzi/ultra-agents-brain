@@ -6,6 +6,7 @@
 - ✅ **v1.5 — Agno Full Reconfiguration** — shipped 2026-05-22, 9 phases, 15 plans ([archive](milestones/v1.5-ROADMAP.md))
 - 🚧 **v2.0 — AgentOS Surface Activation** — in planning (6 phases, 16 requirements)
 - 📋 **v2.1 — Channels** — planned (Discord + WhatsApp + Telegram webhook + vault GitHub sync)
+- 📋 **v2.6 — Brain Knowledge Pipelines** — planned (nightly LLM prose summaries per repo → vault → Telegram search)
 - 📋 **v3.0 — ultra-workshop** — planned (separate repo, after 2–4 weeks of v1.5+v2.0 production operation)
 
 ---
@@ -151,6 +152,39 @@ Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bi
 4. codebase-memory-mcp reindexes on git commit; `vault/repos/<repo>/ARCHITECTURE.md` written after reindex.
 5. One SPEC.md generated from brain and accepted by ultra-workshop `/build` on a real feature.
 6. All four automation loops produce their expected artifact when triggered.
+
+---
+
+### 📋 v2.6 — Brain Knowledge Pipelines
+
+**Goal:** Make all enrolled repos queryable from Telegram/anywhere by compiling nightly LLM prose summaries via GitHub Actions and landing them in the second-brain vault as `repos/<name>.md` files.
+
+**Strategy:** Replace the current useless `reindex_bridge.sh` vault-write (raw stats JSON) with structured LLM prose summaries compiled in CI. Local codebase-memory-mcp graph is preserved for Claude Code sessions only.
+
+| #  | Phase                        | Goal                                                                        | Requirements                              |
+|----|------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+| 17 | Multi-Repo Brain Pipelines   | nightly GH Actions → NVIDIA NIM → prose SUMMARY.md → second-brain fan-in   | BRAIN-01, BRAIN-02, BRAIN-03, BRAIN-04, BRAIN-05 |
+
+**Phase 17: Multi-Repo Brain Pipelines**
+
+**Requirements:**
+- BRAIN-01: Each enrolled repo emits a nightly SUMMARY.md artifact via GitHub Actions
+- BRAIN-02: `second-brain` aggregate.yml fans in all SUMMARY.md files to `repos/<name>.md`
+- BRAIN-03: VPS receives `repos/*.md` via `git pull` (not rsync); rsync excludes `repos/`
+- BRAIN-04: `reindex_bridge.sh` vault-write block removed; local graph reindex preserved
+- BRAIN-05: Telegram BM25 search returns prose summaries for enrolled repos
+
+**Success criteria:**
+1. `repos/ultra-agents-brain.md` appears in `second-brain` with correct schema (Purpose, Stack, Architecture, Status, Recent activity, Key decisions, Entry points, Links) after nightly run.
+2. `ops/sync-vault-to-vps.sh` does not overwrite or delete `repos/*.md` on VPS.
+3. `reindex_bridge.sh` completes without writing to `vault/repos/`.
+4. Telegram `/search ultra-agents-brain` returns a non-empty result sourced from the prose summary.
+5. Enrollment is opt-in; sensitive/private repos excluded.
+
+**Plans:**
+- 17-01: Full pipeline — brain-pipelines repo + aggregate + local script cleanup + caller stub
+
+**Gate:** Begin after Phase 16 (brain-vault-overhaul) is verified complete. ✅ Phase 16 complete 2026-05-26.
 
 ---
 
