@@ -69,6 +69,8 @@ supervisor_team = make_supervisor_team(memory_manager=memory, db=db)
 # instance picks it up via attribute lookup.
 from agentos.eval_recorder import patch_classes_for_recording
 patch_classes_for_recording(db=db)
+from agentos.approval_recorder import patch_db_for_approval_recording
+patch_db_for_approval_recording(db=db)
 
 # --- AgentOS: MCP + A2A + tracing ---
 # NOTE: In this version of Agno, enable_mcp_server is set ONLY on AgentOS();

@@ -178,8 +178,8 @@ class TestApprovalRecorder(unittest.TestCase):
         from agentos.approval_recorder import patch_db_for_approval_recording  # noqa: F401
         from agno.db.sqlite.sqlite import SqliteDb
 
-        db_path = tempfile.mktemp(suffix=".db")
-        sqlite_db = SqliteDb(db_path=db_path)
+        db_file = tempfile.mktemp(suffix=".db")
+        sqlite_db = SqliteDb(db_file=db_file)
 
         # Must not raise AttributeError or anything else
         try:
