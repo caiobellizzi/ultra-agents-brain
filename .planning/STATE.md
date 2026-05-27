@@ -2,32 +2,31 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AgentOS Surface Activation
-current_phase: 16
-status: milestone_complete
-last_updated: 2026-05-26T19:15:17.536Z
-last_activity: 2026-05-26 -- Phase 16 execution started
+current_phase: 17
+status: executing
+last_updated: "2026-05-27T04:37:10.256Z"
+last_activity: 2026-05-27 -- Phase 17 execution started
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
   completed_plans: 19
-  percent: 57
-stopped_at: Milestone complete (Phase 16 was final phase)
+  percent: 71
 ---
 
 # STATE — ultra-agents-brain
 
 **Updated:** 2026-05-22
 **Milestone:** v1.5 — Agno Full Reconfiguration
-**Status:** Milestone complete
-**Current phase:** 16
+**Status:** Executing Phase 17
+**Current phase:** 17
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** Always-on personal knowledge layer — vault RAG + autonomous routines + HITL
-**Current focus:** Milestone complete
+**Current focus:** Phase 17 — multi-repo-brain-pipelines
 
 ## Shipped
 
@@ -74,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 16 (brain-vault-overhaul) — EXECUTING
-Plan: Not started
-Status: Executing Phase 16
-Last activity: 2026-05-26
+Phase: 17 (multi-repo-brain-pipelines) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 17
+Last activity: 2026-05-27 -- Phase 17 execution started

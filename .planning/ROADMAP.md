@@ -163,7 +163,7 @@ Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bi
 
 | #  | Phase                        | Goal                                                                        | Requirements                              |
 |----|------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
-| 17 | Multi-Repo Brain Pipelines   | nightly GH Actions → NVIDIA NIM → prose SUMMARY.md → second-brain fan-in   | BRAIN-01, BRAIN-02, BRAIN-03, BRAIN-04, BRAIN-05 |
+| 17 | 1/1 | Complete   | 2026-05-27 |
 
 **Phase 17: Multi-Repo Brain Pipelines**
 
@@ -187,7 +187,3 @@ Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bi
 **Gate:** Begin after Phase 16 (brain-vault-overhaul) is verified complete. ✅ Phase 16 complete 2026-05-26.
 
 ---
-
-### 📋 v3.0 — ultra-workshop
-
-Separate repo. Agno orchestrator + OpenHands coder sandbox. Reads from Brain via HTTP. Begins only after v2.0 has been running daily for 2–4 weeks.
