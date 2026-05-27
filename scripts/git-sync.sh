@@ -17,10 +17,15 @@ cd "$VAULT_DIR"
 case "$cmd" in
   pull)
     git fetch "$REMOTE" "$BRANCH" --quiet
+    BEFORE=$(git rev-parse HEAD)
     git merge --ff-only "$REMOTE/$BRANCH" --quiet || {
       echo "git-sync: fast-forward failed; manual merge required" >&2
       exit 1
     }
+    AFTER=$(git rev-parse HEAD)
+    if [ "$BEFORE" != "$AFTER" ] && git diff --name-only "$BEFORE" "$AFTER" | grep -q '\.md$'; then
+      "$(dirname "$0")/reindex-vault.sh" || true
+    fi
     ;;
   push)
     git add -A
