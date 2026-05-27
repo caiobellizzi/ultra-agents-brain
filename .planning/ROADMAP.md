@@ -164,6 +164,7 @@ Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bi
 | #  | Phase                        | Goal                                                                        | Requirements                              |
 |----|------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 | 17 | 1/1 | Complete   | 2026-05-27 |
+| 18 | 0/2 | In progress | SYNC-01–SYNC-05 |
 
 **Phase 17: Multi-Repo Brain Pipelines**
 
@@ -185,5 +186,29 @@ Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bi
 - 17-01: Full pipeline — brain-pipelines repo + aggregate + local script cleanup + caller stub
 
 **Gate:** Begin after Phase 16 (brain-vault-overhaul) is verified complete. ✅ Phase 16 complete 2026-05-26.
+
+---
+
+**Phase 18: Auto-sync second-brain → VPS + pgvector reindex**
+
+**Requirements:**
+- SYNC-01: SSH deploy key (write-enabled, ed25519) for `uabrain` registered on `caiobellizzi/second-brain`; VPS remote uses SSH not HTTPS
+- SYNC-02: `scripts/reindex-vault.sh` exists — flock-guarded, sources `.env`, uses venv python, always exits 0
+- SYNC-03: `scripts/git-sync.sh` pull branch triggers reindex when HEAD advances and `.md` files changed
+- SYNC-04: Both scripts deployed to VPS via scp; `logs/` dir created with `uabrain` ownership
+- SYNC-05: End-to-end: GitHub `repos/*.md` change appears in pgvector within ~5 min, no manual action
+
+**Success criteria:**
+1. `sudo -u uabrain git -C /srv/second-brain fetch origin main` succeeds (no auth error).
+2. `git-sync.sh pull` with a new `repos/*.md` triggers reindex; `logs/reindex.log` shows indexed entry.
+3. `git-sync.sh pull` with no new `.md` files does NOT trigger reindex.
+4. Concurrent `reindex-vault.sh` invocation logs "skipping" and exits 0.
+5. Live Telegram `/query` with a term unique to a newly-synced file returns the correct answer.
+
+**Plans:**
+- 18-01: SSH deploy key setup — restore VPS↔GitHub auth (manual checkpoint)
+- 18-02: reindex-vault.sh + git-sync.sh edit + VPS deploy + end-to-end smoke test
+
+**Gate:** Begin after Phase 17 (multi-repo-brain-pipelines) verified complete. ✅ Phase 17 complete 2026-05-27.
 
 ---
