@@ -14,10 +14,17 @@ from __future__ import annotations
 
 import argparse
 import re
-import shutil
+import shlex
+import subprocess
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from ultra_brain.vault import trash_paths
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +230,17 @@ def _unique_dest(dest: Path) -> Path:
         i += 1
 
 
+def _copy_for_move(source: Path, dest: Path) -> Path:
+    """Copy source to dest, reusing an identical dest left by an interrupted run."""
+    source_bytes = source.read_bytes()
+    if dest.exists():
+        if dest.read_bytes() == source_bytes:
+            return dest
+        dest = _unique_dest(dest)
+    dest.write_bytes(source_bytes)
+    return dest
+
+
 def _append_log(log_path: Path, promoted: list[str], archived: list[str], total: int) -> None:
     """Append a batch log entry to vault/_system/log.md."""
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -251,6 +269,29 @@ def _append_log(log_path: Path, promoted: list[str], archived: list[str], total:
 
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write("\n".join(entry_lines) + "\n\n")
+
+
+_VPS_HOST = "root@31.97.130.253"
+_VPS_VAULT = "/srv/second-brain"
+
+
+def _delete_from_vps(vault_root: Path, paths: list[Path]) -> None:
+    """Delete swept files from VPS so the next rsync pull doesn't restore them."""
+    if not paths:
+        return
+    rel_paths = [str(p.relative_to(vault_root)) for p in paths]
+    remote_cmd = "rm -f " + " ".join(shlex.quote(f"{_VPS_VAULT}/{rp}") for rp in rel_paths)
+    try:
+        result = subprocess.run(
+            ["ssh", "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", _VPS_HOST, remote_cmd],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode == 0:
+            print(f"VPS cleanup: removed {len(rel_paths)} file(s).")
+        else:
+            print(f"WARNING: VPS cleanup failed (rc={result.returncode}): {result.stderr.strip()}", file=sys.stderr)
+    except Exception as exc:
+        print(f"WARNING: VPS cleanup skipped ({exc}); files may reappear after next sync.", file=sys.stderr)
 
 
 def sweep(vault_root: Path, *, dry_run: bool = False) -> int:
@@ -311,6 +352,7 @@ def sweep(vault_root: Path, *, dry_run: bool = False) -> int:
     # Execute moves
     promote_dir.mkdir(parents=True, exist_ok=True)
     archive_dir.mkdir(parents=True, exist_ok=True)
+    trash_candidates: list[Path] = []
 
     for item in items:
         title, _fm, body = _extract_text(item)
@@ -335,20 +377,23 @@ def sweep(vault_root: Path, *, dry_run: bool = False) -> int:
             # may have written to this path; read_bytes forces the OS to flush the iCloud buffer
             _ = item.read_bytes()
 
-            dest = _unique_dest(promote_dir / item.name)
-            dest.write_bytes(item.read_bytes())
-            item.unlink()
-            if item.exists():
-                raise RuntimeError(f"iCloud unlink failed for {item.name} — manual cleanup required")
+            _copy_for_move(item, promote_dir / item.name)
+            trash_candidates.append(item)
             promoted_names.append(item.name)
         else:
             # Archive: move as-is (do NOT modify content)
-            dest = _unique_dest(archive_dir / item.name)
-            dest.write_bytes(item.read_bytes())
-            item.unlink()
-            if item.exists():
-                raise RuntimeError(f"iCloud unlink failed for {item.name} — manual cleanup required")
+            _copy_for_move(item, archive_dir / item.name)
+            trash_candidates.append(item)
             archived_names.append(item.name)
+
+    trash_paths(trash_candidates)
+    still_present = [path.name for path in trash_candidates if path.exists()]
+    if still_present:
+        raise RuntimeError(
+            f"Finder trash failed for {len(still_present)} item(s): {still_present[:5]} — manual cleanup required"
+        )
+
+    _delete_from_vps(vault_root, trash_candidates)
 
     print()
     print(f"Done: {len(promoted_names)} promoted, {len(archived_names)} archived.")
