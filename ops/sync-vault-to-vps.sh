@@ -24,6 +24,7 @@ EXCLUDES=(
   --exclude '_system/monitor-seen.json'
   --exclude '_system/brief-seen.json'
   --exclude '_system/bluesky-seen.json'
+  --exclude 'repos/'
 )
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] pull VPS → Mac"
