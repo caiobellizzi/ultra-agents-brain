@@ -12,6 +12,7 @@ echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] reindex-vault: starting"
 # shellcheck source=/dev/null
 [ -f "$APP_DIR/.env" ] && . "$APP_DIR/.env"
 
+cd "$APP_DIR"
 if flock -n "$LOCK" "$APP_DIR/.venv/bin/python" -m agentos.knowledge --reindex; then
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] reindex-vault: complete"
 else
