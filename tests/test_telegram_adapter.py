@@ -146,6 +146,10 @@ class TestCallbackDataValidation(unittest.TestCase):
 
         client = AsyncMock()
         # answerCallbackQuery — always succeeds
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-cv", "tool_execution": {"tool_call_id": ""}, "status": "pending"}]},
+        ))
         client.post = AsyncMock(return_value=MagicMock(
             status_code=200,
             json=lambda: {"content": "done"},
@@ -247,6 +251,10 @@ class TestApproveDoubleTap(unittest.TestCase):
 
         run_id = "11111111-2222-3333-4444-555555555555"
         client = AsyncMock()
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-x", "tool_execution": {"tool_call_id": "abcdef01-abcd-abcd-abcd-abcdef012345"}, "status": "pending"}]},
+        ))
         client.post = AsyncMock(return_value=MagicMock(
             status_code=200, json=lambda: {"content": "ok"}, text=""
         ))
@@ -267,6 +275,10 @@ class TestApproveDoubleTap(unittest.TestCase):
         # 1st call to client.post = answerCallbackQuery (200)
         # 2nd call = /continue (409 with "already continued" body)
         client = AsyncMock()
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-y", "tool_execution": {"tool_call_id": "abcdef01-abcd-abcd-abcd-abcdef012345"}, "status": "pending"}]},
+        ))
 
         async def _post(url, *args, **kwargs):
             if "continue" in url:
@@ -302,6 +314,10 @@ class TestApproveDoubleTap(unittest.TestCase):
 
         run_id = "99999999-8888-7777-6666-555555555555"
         client = AsyncMock()
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-z", "tool_execution": {"tool_call_id": "abcdef01-abcd-abcd-abcd-abcdef012345"}, "status": "pending"}]},
+        ))
 
         async def _post(url, *args, **kwargs):
             if "continue" in url:
@@ -371,6 +387,225 @@ class TestExtractReplyText(unittest.TestCase):
         result = self.mod.format_citations(citations)
         self.assertIn("Note 0", result)
         self.assertNotIn("Note 3", result)
+
+
+class TestApprovalBridge(unittest.TestCase):
+    """APPR-02 — _resolve_approval_row wired into handle_callback.
+
+    Tests:
+      14-02-01: approve callback calls POST /approvals/{id}/resolve with status='approved' BEFORE /continue
+      14-02-02: deny callback calls POST /approvals/{id}/resolve with status='rejected' BEFORE /continue
+      14-02-03: resolve failure (500) releases _RESOLVED_RUNS guard, sends Telegram error, skips /continue
+      14-02-04: 409 on resolve is treated as idempotent success — /continue IS called
+    """
+
+    RUN_ID = "aaaabbbb-cccc-dddd-eeee-ffffffffffff"
+    AGENT_ID = "ingest"
+    TOOL_CALL_ID = "tcid-0001-0002-0003-000400000005"
+    APPROVAL_ID = "ap-001"
+    CHAT_ID = 123456
+    TG_USER_ID = 123456
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = _import_adapter_with_env()
+
+    def setUp(self):
+        self.mod._RESOLVED_RUNS.clear()
+        self.mod._PAUSED_TOOLS.clear()
+        # Pre-populate _PAUSED_TOOLS so handle_callback has a cached tool
+        self.mod._PAUSED_TOOLS[self.RUN_ID] = [
+            {
+                "tool_call_id": self.TOOL_CALL_ID,
+                "tool_name": "save_note",
+                "tool_args": {},
+                "run_id": self.RUN_ID,
+                "requires_confirmation": True,
+            }
+        ]
+
+    def _query(self, action: str = "approve") -> dict:
+        return {
+            "id": "cq-bridge",
+            "message": {"chat": {"id": self.CHAT_ID}},
+            "from": {"id": self.TG_USER_ID},
+            "data": f"{action}:{self.RUN_ID}:{self.AGENT_ID}:{self.TOOL_CALL_ID}",
+        }
+
+    def _make_client(self, resolve_status: int = 200) -> tuple:
+        """Return (client, call_log) where call_log tracks (method, url) pairs in order."""
+        import asyncio
+
+        call_log: list[tuple[str, str]] = []
+
+        approvals_get_response = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "data": [
+                    {
+                        "id": self.APPROVAL_ID,
+                        "tool_execution": {"tool_call_id": self.TOOL_CALL_ID},
+                        "status": "pending",
+                    }
+                ]
+            },
+        )
+
+        def _resolve_response():
+            return MagicMock(
+                status_code=resolve_status,
+                text='{"detail":"already resolved"}' if resolve_status == 409 else "{}",
+                json=lambda: {},
+            )
+
+        continue_response = MagicMock(
+            status_code=200,
+            text="{}",
+            json=lambda: {"run_status": "completed", "content": []},
+        )
+
+        tg_response = MagicMock(status_code=200, json=lambda: {})
+
+        async def _get(url, **kwargs):
+            call_log.append(("GET", url))
+            if "approvals" in url:
+                return approvals_get_response
+            return MagicMock(status_code=200, json=lambda: {})
+
+        async def _post(url, **kwargs):
+            call_log.append(("POST", url))
+            if "answerCallbackQuery" in url:
+                return tg_response
+            if "sendMessage" in url:
+                return tg_response
+            if f"approvals/{self.APPROVAL_ID}/resolve" in url:
+                return _resolve_response()
+            if "continue" in url:
+                return continue_response
+            return MagicMock(status_code=200, json=lambda: {})
+
+        client = MagicMock()
+        client.get = AsyncMock(side_effect=_get)
+        client.post = AsyncMock(side_effect=_post)
+        return client, call_log
+
+    def test_approve_resolves_then_continues(self):
+        """14-02-01: approve calls POST /approvals/ap-001/resolve(status=approved) then /continue."""
+        import asyncio
+
+        client, call_log = self._make_client(resolve_status=200)
+
+        # Capture resolve body
+        resolve_bodies: list[dict] = []
+        original_post = client.post.side_effect
+
+        async def _post_capturing(url, **kwargs):
+            if f"approvals/{self.APPROVAL_ID}/resolve" in url:
+                resolve_bodies.append(kwargs.get("json", {}))
+            return await original_post(url, **kwargs)
+
+        client.post.side_effect = _post_capturing
+
+        asyncio.run(self.mod.handle_callback(client, self._query("approve")))
+
+        # Assert resolve was called with status='approved'
+        self.assertTrue(
+            len(resolve_bodies) > 0,
+            "POST /approvals/{id}/resolve was never called",
+        )
+        self.assertEqual(resolve_bodies[0].get("status"), "approved")
+
+        # Assert /continue was called
+        continue_calls = [url for method, url in call_log if "continue" in url]
+        self.assertTrue(len(continue_calls) > 0, "/continue was not called after resolve")
+
+        # Assert resolve came BEFORE continue (call order check)
+        resolve_idx = next(
+            (i for i, (m, u) in enumerate(call_log) if f"approvals/{self.APPROVAL_ID}/resolve" in u),
+            None,
+        )
+        continue_idx = next(
+            (i for i, (m, u) in enumerate(call_log) if "continue" in u),
+            None,
+        )
+        self.assertIsNotNone(resolve_idx, "resolve call not found in call_log")
+        self.assertIsNotNone(continue_idx, "/continue call not found in call_log")
+        self.assertLess(resolve_idx, continue_idx, "resolve must happen BEFORE /continue")
+
+    def test_deny_resolves_rejected(self):
+        """14-02-02: deny calls POST /approvals/ap-001/resolve(status=rejected) then /continue."""
+        import asyncio
+
+        client, call_log = self._make_client(resolve_status=200)
+
+        resolve_bodies: list[dict] = []
+        original_post = client.post.side_effect
+
+        async def _post_capturing(url, **kwargs):
+            if f"approvals/{self.APPROVAL_ID}/resolve" in url:
+                resolve_bodies.append(kwargs.get("json", {}))
+            return await original_post(url, **kwargs)
+
+        client.post.side_effect = _post_capturing
+
+        asyncio.run(self.mod.handle_callback(client, self._query("deny")))
+
+        self.assertTrue(len(resolve_bodies) > 0, "POST /approvals/{id}/resolve was never called")
+        self.assertEqual(resolve_bodies[0].get("status"), "rejected")
+
+        # /continue must still be called even on deny
+        continue_calls = [url for method, url in call_log if "continue" in url]
+        self.assertTrue(len(continue_calls) > 0, "/continue must be called even on deny")
+
+    def test_resolve_failure_releases_guard(self):
+        """14-02-03: resolve 500 → skip /continue, release _RESOLVED_RUNS, send Telegram error."""
+        import asyncio
+
+        client, call_log = self._make_client(resolve_status=500)
+
+        sent_messages: list[str] = []
+        original_send = self.mod.send_message
+
+        async def _fake_send(c, chat_id, text):
+            sent_messages.append(text)
+
+        self.mod.send_message = _fake_send
+        try:
+            asyncio.run(self.mod.handle_callback(client, self._query("approve")))
+        finally:
+            self.mod.send_message = original_send
+
+        # /continue must NOT have been called
+        continue_calls = [url for method, url in call_log if "continue" in url]
+        self.assertEqual(continue_calls, [], "/continue must NOT be called when resolve fails")
+
+        # _RESOLVED_RUNS guard must be released
+        self.assertNotIn(
+            self.RUN_ID,
+            self.mod._RESOLVED_RUNS,
+            "_RESOLVED_RUNS guard must be released on resolve failure for retry",
+        )
+
+        # Telegram error message must be sent
+        self.assertTrue(
+            len(sent_messages) > 0,
+            "Telegram error message must be sent when resolve fails",
+        )
+
+    def test_resolve_409_is_ok(self):
+        """14-02-04: 409 on resolve is idempotent success — /continue IS called."""
+        import asyncio
+
+        client, call_log = self._make_client(resolve_status=409)
+
+        asyncio.run(self.mod.handle_callback(client, self._query("approve")))
+
+        # /continue must be called (409 treated as success)
+        continue_calls = [url for method, url in call_log if "continue" in url]
+        self.assertTrue(
+            len(continue_calls) > 0,
+            "/continue must be called when resolve returns 409 (idempotent)",
+        )
 
 
 if __name__ == "__main__":
