@@ -146,6 +146,10 @@ class TestCallbackDataValidation(unittest.TestCase):
 
         client = AsyncMock()
         # answerCallbackQuery — always succeeds
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-cv", "tool_execution": {"tool_call_id": ""}, "status": "pending"}]},
+        ))
         client.post = AsyncMock(return_value=MagicMock(
             status_code=200,
             json=lambda: {"content": "done"},
@@ -247,6 +251,10 @@ class TestApproveDoubleTap(unittest.TestCase):
 
         run_id = "11111111-2222-3333-4444-555555555555"
         client = AsyncMock()
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-x", "tool_execution": {"tool_call_id": "abcdef01-abcd-abcd-abcd-abcdef012345"}, "status": "pending"}]},
+        ))
         client.post = AsyncMock(return_value=MagicMock(
             status_code=200, json=lambda: {"content": "ok"}, text=""
         ))
@@ -267,6 +275,10 @@ class TestApproveDoubleTap(unittest.TestCase):
         # 1st call to client.post = answerCallbackQuery (200)
         # 2nd call = /continue (409 with "already continued" body)
         client = AsyncMock()
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-y", "tool_execution": {"tool_call_id": "abcdef01-abcd-abcd-abcd-abcdef012345"}, "status": "pending"}]},
+        ))
 
         async def _post(url, *args, **kwargs):
             if "continue" in url:
@@ -302,6 +314,10 @@ class TestApproveDoubleTap(unittest.TestCase):
 
         run_id = "99999999-8888-7777-6666-555555555555"
         client = AsyncMock()
+        client.get = AsyncMock(return_value=MagicMock(
+            status_code=200,
+            json=lambda: {"data": [{"id": "ap-z", "tool_execution": {"tool_call_id": "abcdef01-abcd-abcd-abcd-abcdef012345"}, "status": "pending"}]},
+        ))
 
         async def _post(url, *args, **kwargs):
             if "continue" in url:

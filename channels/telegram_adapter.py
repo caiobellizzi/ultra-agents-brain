@@ -418,6 +418,77 @@ async def _handle_review_sweep_callback(
         log.warning("Unknown review_sweep action: %s", action)
 
 
+async def _resolve_approval_row(
+    client: httpx.AsyncClient,
+    run_id: str,
+    tool_call_id: str,
+    confirmed: bool,
+    tg_user_id: int,
+) -> bool:
+    """Resolve the native ai.agno_approvals row for the given run/tool before /continue.
+
+    Returns True on success (resolved or 409 idempotent), False on any failure.
+    Failures are logged but never raised — caller must surface error to user.
+    """
+    try:
+        status_value = "approved" if confirmed else "rejected"
+        resolved_by = f"telegram:{tg_user_id}"
+
+        # GET pending approval rows for this run
+        get_resp = await client.get(
+            f"{AGENTOS_BASE_URL}/approvals",
+            params={"run_id": run_id, "status": "pending", "approval_type": "required"},
+        )
+        if get_resp.status_code != 200:
+            log.warning(
+                "GET /approvals returned %s for run %s — skipping resolve",
+                get_resp.status_code,
+                run_id,
+            )
+            return False
+
+        rows = get_resp.json().get("data") or []
+
+        # Find the approval row matching tool_call_id; fall back to first row
+        approval_id: str | None = None
+        for row in rows:
+            if row.get("tool_execution", {}).get("tool_call_id") == tool_call_id:
+                approval_id = row.get("id")
+                break
+        if approval_id is None and rows:
+            approval_id = rows[0].get("id")
+
+        if not approval_id:
+            log.warning("No pending approval row found for run %s tool_call_id %s", run_id, tool_call_id)
+            return False
+
+        # POST resolve
+        resolve_resp = await client.post(
+            f"{AGENTOS_BASE_URL}/approvals/{approval_id}/resolve",
+            json={"status": status_value, "resolved_by": resolved_by, "resolution_data": {}},
+        )
+        if resolve_resp.status_code == 409:
+            log.info("Approval %s already resolved (409) — idempotent ok for run %s", approval_id, run_id)
+            return True
+        if resolve_resp.status_code not in (200, 201):
+            log.warning(
+                "POST /approvals/%s/resolve returned %s: %s",
+                approval_id,
+                resolve_resp.status_code,
+                resolve_resp.text[:200] if hasattr(resolve_resp, "text") else "",
+            )
+            return False
+
+        return True
+
+    except httpx.RequestError as exc:
+        log.error("Network error resolving approval row for run %s: %s", run_id, exc)
+        return False
+    except Exception as exc:  # noqa: BLE001
+        log.error("Unexpected error resolving approval row for run %s: %s", run_id, exc)
+        return False
+
+
 async def handle_callback(
     client: httpx.AsyncClient,
     query: dict,
@@ -466,6 +537,13 @@ async def handle_callback(
         return
     _RESOLVED_RUNS.add(run_id)
     confirmed = action == "approve"
+
+    # Resolve the native approval row BEFORE calling /continue (APPR-02).
+    resolved = await _resolve_approval_row(client, run_id, tool_call_id, confirmed, tg_user_id)
+    if not resolved:
+        await send_message(client, chat_id, "Approval update failed — please try again.")
+        _RESOLVED_RUNS.discard(run_id)
+        return
 
     # Resume the run via Agno's native /runs/{run_id}/continue endpoint.
     # Agno REPLACES run_response.tools with this list, so we must echo back the
