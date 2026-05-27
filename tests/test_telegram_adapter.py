@@ -608,5 +608,40 @@ class TestApprovalBridge(unittest.TestCase):
         )
 
 
+class TestRouteMessageReplyExtraction(unittest.TestCase):
+    """Regression — current Agno run payloads use content, not output."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = _import_adapter_with_env()
+
+    def _run_route_message(self, payload: dict) -> list[str]:
+        import asyncio
+
+        client = AsyncMock()
+        client.post = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: payload))
+
+        sent: list[str] = []
+        original_send = self.mod.send_message
+
+        async def fake_send(c, chat_id, text, reply_markup=None):
+            sent.append(text)
+
+        self.mod.send_message = fake_send
+        try:
+            asyncio.run(self.mod.route_message(client, "hello", 123, 456))
+        finally:
+            self.mod.send_message = original_send
+        return sent
+
+    def test_route_message_sends_current_agno_content_text(self):
+        sent = self._run_route_message({"content": {"text": "hello from content"}, "status": "COMPLETED"})
+        self.assertEqual(sent, ["hello from content"])
+
+    def test_route_message_never_sends_literal_empty_object(self):
+        sent = self._run_route_message({"content": {}, "status": "COMPLETED"})
+        self.assertEqual(sent, ["AgentOS completed but returned no reply text."])
+
+
 if __name__ == "__main__":
     unittest.main()
