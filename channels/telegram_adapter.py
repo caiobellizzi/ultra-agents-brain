@@ -456,6 +456,23 @@ async def _resolve_approval_row(
                 approval_id = row.get("id")
                 break
         if approval_id is None and rows:
+            if len(rows) > 1:
+                log.warning(
+                    "No approval row matched tool_call_id %s for run %s — "
+                    "%d pending rows exist; refusing ambiguous fallback",
+                    tool_call_id,
+                    run_id,
+                    len(rows),
+                )
+                return False
+            # Single pending row — unambiguous fallback
+            log.warning(
+                "No approval row matched tool_call_id %s for run %s — "
+                "falling back to single pending row %s",
+                tool_call_id,
+                run_id,
+                rows[0].get("id"),
+            )
             approval_id = rows[0].get("id")
 
         if not approval_id:
