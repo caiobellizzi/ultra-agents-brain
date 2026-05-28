@@ -33,9 +33,9 @@
 
 ### APPR — Approvals Surface
 
-- [ ] **APPR-01**: HITL approval events created via Telegram inline buttons appear in the AgentOS approvals UI list
-- [ ] **APPR-02**: Approving/rejecting via Telegram updates the AgentOS approval row state (pending → approved/rejected)
-- [ ] **APPR-03**: Approvals UI displays the underlying tool call and arguments awaiting approval
+- [x] **APPR-01**: HITL approval events created via Telegram inline buttons appear in the AgentOS approvals UI list
+- [x] **APPR-02**: Approving/rejecting via Telegram updates the AgentOS approval row state (pending → approved/rejected)
+- [x] **APPR-03**: Approvals UI displays the underlying tool call and arguments awaiting approval
 
 ### OBS — Observability
 

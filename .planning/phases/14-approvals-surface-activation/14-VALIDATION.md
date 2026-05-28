@@ -38,22 +38,22 @@ created: 2026-05-27
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 14-01-01 | 01 | 1 | APPR-01 | — | `create_approval` DB method wrapped and OBS log emitted | unit | `pytest tests/test_approval_recorder.py::test_create_approval_logs_ok -x` | ❌ Wave 0 | ⬜ pending |
-| 14-01-02 | 01 | 1 | APPR-01 | — | OBS log emitted on approval creation with required fields | unit | `pytest tests/test_approval_recorder.py::test_obs_log_on_create -x` | ❌ Wave 0 | ⬜ pending |
-| 14-01-03 | 01 | 1 | APPR-03 | — | `tool_name` and `tool_args` visible in approval row | unit | `pytest tests/test_approval_recorder.py::test_tool_name_in_approval_data -x` | ❌ Wave 0 | ⬜ pending |
-| 14-01-04 | 01 | 1 | OBS-01 | — | `update_approval` emits resolve OBS log | unit | `pytest tests/test_approval_recorder.py::test_update_approval_logs_resolve -x` | ❌ Wave 0 | ⬜ pending |
-| 14-01-05 | 01 | 1 | OBS-01 | — | `update_approval_run_status` emits run_status OBS log | unit | `pytest tests/test_approval_recorder.py::test_update_run_status_logs -x` | ❌ Wave 0 | ⬜ pending |
-| 14-01-06 | 01 | 1 | OBS-01 | — | Logging failure is non-fatal (log and swallow, never blocks approval) | unit | `pytest tests/test_approval_recorder.py::test_log_failure_nonfatal -x` | ❌ Wave 0 | ⬜ pending |
-| 14-01-07 | 01 | 1 | D-14 | — | SqliteDb fallback does not 503 on `GET /approvals` | unit | `pytest tests/test_approval_recorder.py::test_sqlite_fallback_no_503 -x` | ❌ Wave 0 | ⬜ pending |
-| 14-02-01 | 02 | 2 | APPR-02 | Duplicate-tap double-resolve | Telegram Approve calls `/approvals/{id}/resolve` then `/runs/{run_id}/continue` | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_approve_resolves_then_continues -x` | ❌ Wave 0 | ⬜ pending |
-| 14-02-02 | 02 | 2 | APPR-02 | Wrong row match | Telegram Deny resolves with status=rejected | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_deny_resolves_rejected -x` | ❌ Wave 0 | ⬜ pending |
-| 14-02-03 | 02 | 2 | APPR-02 | Resolve-then-continue gap | Resolve failure sends Telegram error and releases `_RESOLVED_RUNS` guard | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_resolve_failure_releases_guard -x` | ❌ Wave 0 | ⬜ pending |
-| 14-02-04 | 02 | 2 | APPR-02 | Duplicate-tap | 409 on resolve is idempotent success | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_resolve_409_is_ok -x` | ❌ Wave 0 | ⬜ pending |
-| 14-03-01 | 03 | 3 | APPR-01 | — | `GET /approvals` returns pending row after smoke trigger | integration (VPS) | manual — `curl "http://localhost:7777/v1/approvals?run_id=<run_id>"` | n/a | ⬜ pending |
-| 14-03-02 | 03 | 3 | APPR-02 | — | Telegram Approve → row flips to approved within 2 seconds | integration (VPS) | manual — `psql` check | n/a | ⬜ pending |
-| 14-03-03 | 03 | 3 | APPR-02 | — | Telegram Deny → row flips to rejected within 2 seconds | integration (VPS) | manual — `psql` check | n/a | ⬜ pending |
-| 14-03-04 | 03 | 3 | APPR-03 | — | `tool_name='ingest_to_vault'` and fixture path in `tool_args` visible in row | integration (VPS) | manual — `psql` / API check | n/a | ⬜ pending |
-| 14-03-05 | 03 | 3 | OBS-01 | — | Structured log lines for creation, resolve, and run_status update appear in journald | integration (VPS) | manual — `journalctl` grep | n/a | ⬜ pending |
+| 14-01-01 | 01 | 1 | APPR-01 | — | `create_approval` DB method wrapped and OBS log emitted | unit | `pytest tests/test_approval_recorder.py::test_create_approval_logs_ok -x` | ✅ green | ✅ green |
+| 14-01-02 | 01 | 1 | APPR-01 | — | OBS log emitted on approval creation with required fields | unit | `pytest tests/test_approval_recorder.py::test_obs_log_on_create -x` | ✅ green | ✅ green |
+| 14-01-03 | 01 | 1 | APPR-03 | — | `tool_name` and `tool_args` visible in approval row | unit | `pytest tests/test_approval_recorder.py::test_tool_name_in_approval_data -x` | ✅ green | ✅ green |
+| 14-01-04 | 01 | 1 | OBS-01 | — | `update_approval` emits resolve OBS log | unit | `pytest tests/test_approval_recorder.py::test_update_approval_logs_resolve -x` | ✅ green | ✅ green |
+| 14-01-05 | 01 | 1 | OBS-01 | — | `update_approval_run_status` emits run_status OBS log | unit | `pytest tests/test_approval_recorder.py::test_update_run_status_logs -x` | ✅ green | ✅ green |
+| 14-01-06 | 01 | 1 | OBS-01 | — | Logging failure is non-fatal (log and swallow, never blocks approval) | unit | `pytest tests/test_approval_recorder.py::test_log_failure_nonfatal -x` | ✅ green | ✅ green |
+| 14-01-07 | 01 | 1 | D-14 | — | SqliteDb fallback does not 503 on `GET /approvals` | unit | `pytest tests/test_approval_recorder.py::test_sqlite_fallback_no_503 -x` | ✅ green | ✅ green |
+| 14-02-01 | 02 | 2 | APPR-02 | Duplicate-tap double-resolve | Telegram Approve calls `/approvals/{id}/resolve` then `/runs/{run_id}/continue` | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_approve_resolves_then_continues -x` | ✅ green | ✅ green |
+| 14-02-02 | 02 | 2 | APPR-02 | Wrong row match | Telegram Deny resolves with status=rejected | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_deny_resolves_rejected -x` | ✅ green | ✅ green |
+| 14-02-03 | 02 | 2 | APPR-02 | Resolve-then-continue gap | Resolve failure sends Telegram error and releases `_RESOLVED_RUNS` guard | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_resolve_failure_releases_guard -x` | ✅ green | ✅ green |
+| 14-02-04 | 02 | 2 | APPR-02 | Duplicate-tap | 409 on resolve is idempotent success | unit | `pytest tests/test_telegram_adapter.py::TestApprovalBridge::test_resolve_409_is_ok -x` | ✅ green | ✅ green |
+| 14-03-01 | 03 | 3 | APPR-01 | — | `GET /approvals` returns pending row after smoke trigger | integration (VPS) | manual — `curl "http://localhost:7777/v1/approvals?run_id=<run_id>"` | n/a | ✅ green |
+| 14-03-02 | 03 | 3 | APPR-02 | — | Telegram Approve → row flips to approved within 2 seconds | integration (VPS) | manual — `psql` check | n/a | ✅ green |
+| 14-03-03 | 03 | 3 | APPR-02 | — | Telegram Deny → row flips to rejected within 2 seconds | integration (VPS) | manual — `psql` check | n/a | ✅ green |
+| 14-03-04 | 03 | 3 | APPR-03 | — | `tool_name='ingest_to_vault'` and fixture path in `tool_args` visible in row | integration (VPS) | manual — `psql` / API check | n/a | ✅ green |
+| 14-03-05 | 03 | 3 | OBS-01 | — | Structured log lines for creation, resolve, and run_status update appear in journald | integration (VPS) | manual — `journalctl` grep | n/a | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
