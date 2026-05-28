@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import ssl
@@ -42,12 +43,16 @@ class DedupStore:
         return set(json.loads(self.path.read_text(encoding="utf-8")).get("seen", []))
 
     def add_new(self, keys: list[str]) -> list[str]:
-        seen = self.load()
-        new = [key for key in keys if key not in seen]
-        if new:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            seen.update(new)
-            self.path.write_text(json.dumps({"seen": sorted(seen)}, indent=2) + "\n", encoding="utf-8")
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self.path.with_suffix(".lock")
+        with open(lock_path, "w") as lock_fh:
+            fcntl.flock(lock_fh, fcntl.LOCK_EX)
+            seen = self.load()
+            new = [key for key in keys if key not in seen]
+            if new:
+                seen.update(new)
+                self.path.write_text(json.dumps({"seen": sorted(seen)}, indent=2) + "\n", encoding="utf-8")
+            # lock released on context-manager exit
         return new
 
 
