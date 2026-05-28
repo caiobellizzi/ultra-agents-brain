@@ -31,6 +31,10 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] pull VPS → Mac"
 /usr/bin/rsync -av --update "${EXCLUDES[@]}" "$REMOTE" "$LOCAL"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] push Mac → VPS"
-/usr/bin/rsync -av --update --delete "${EXCLUDES[@]}" "$LOCAL" "$REMOTE"
+/usr/bin/rsync -av --update --delete --no-owner --no-group "${EXCLUDES[@]}" "$LOCAL" "$REMOTE"
+
+# Ensure VPS vault is writable by the uabrain cron user (rsync runs as root, sets root ownership)
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] fix vault ownership on VPS"
+ssh root@31.97.130.253 "chown -R uabrain:uabrain /srv/second-brain/"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] done"

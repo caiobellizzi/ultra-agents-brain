@@ -5,10 +5,15 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 5 8 * * * uabrain /opt/ultra-agents-brain/scripts/cost-check.sh
 15 7 * * 1 uabrain /opt/ultra-agents-brain/scripts/lint-check.sh
 # Daily briefing digest at 20:00
-0 20 * * * uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" digest
+0 20 * * * uabrain bash -c "set -a && source /opt/ultra-agents-brain/.env && set +a && python3 -m ultra_brain --vault /srv/second-brain digest"
+# Daily AI brief at 08:00 and 20:30 (reads Inbox, calls LLM, writes vault brief)
+0 8 * * * uabrain bash -c "set -a && source /opt/ultra-agents-brain/.env && set +a && python3 -m ultra_brain --vault /srv/second-brain daily-brief"
+30 20 * * * uabrain bash -c "set -a && source /opt/ultra-agents-brain/.env && set +a && python3 -m ultra_brain --vault /srv/second-brain daily-brief"
 # Weekly review every Sunday at 18:00
-0 18 * * 0 uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" review
-# Monitor RSS poll every 4 hours
-0 */4 * * * uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" monitor
+0 18 * * 0 uabrain bash -c "set -a && source /opt/ultra-agents-brain/.env && set +a && python3 -m ultra_brain --vault /srv/second-brain review"
+# Monitor RSS poll every 4 hours — feeds path must be explicit (no env var in cron)
+0 */4 * * * uabrain bash -c "set -a && source /opt/ultra-agents-brain/.env && set +a && python3 -m ultra_brain --vault /srv/second-brain monitor --feeds /opt/ultra-agents-brain/skills/worker.monitor/feeds.txt"
 # Nightly vault lint at 02:00
-0 2 * * * uabrain python3 -m ultra_brain --vault "$SECOND_BRAIN_DIR" lint --report
+0 2 * * * uabrain bash -c "set -a && source /opt/ultra-agents-brain/.env && set +a && python3 -m ultra_brain --vault /srv/second-brain lint --report"
+# Vault sync — ultra-workshop Phase 1 (every 5 min, push then pull)
+*/5 * * * * uabrain /opt/ultra-agents-brain/scripts/git-sync.sh push "vps-auto $(date -u +\%H:\%M)" && /opt/ultra-agents-brain/scripts/git-sync.sh pull
