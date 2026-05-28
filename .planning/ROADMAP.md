@@ -23,7 +23,7 @@
 | 11 | Memory Surface Activation              | Memory tab in os.agno.com shows entries after agent runs                                   | MEM-01, MEM-02, MEM-03, OBS-01 (memory path)  | 4        |
 | 12 | Evals Surface Activation               | 4/4 | Complete    | 2026-05-24 |
 | 13 | Knowledge Surface Activation           | 3/3 | Complete   | 2026-05-23 |
-| 14 | Approvals Surface Activation           | 2/3 | In Progress|  |
+| 14 | Approvals Surface Activation           | 3/3 | Complete   | 2026-05-28 |
 | 15 | worker.monitor Polish + Final Verify   | Daily-brief date bug fixed; vault-sync delete bug fixed; surface-smoke verification doc    | MON-01, MON-02, OBS-02                        | 4        |
 
 **6 phases · 16 requirements · 100% coverage**
@@ -95,12 +95,12 @@ See `phases/13-knowledge-surface-activation/13-VERIFICATION.md` for full evidenc
 
 **Requirements:** APPR-01, APPR-02, APPR-03, OBS-01 (approval path)
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 14-01-PLAN.md — approval_recorder.py DB instrumentation + OBS-01 logging (TDD)
 - [x] 14-02-PLAN.md — Telegram row-resolution bridge _resolve_approval_row (TDD)
-- [ ] 14-03-PLAN.md — VPS live verification + VERIFICATION.md
+- [x] 14-03-PLAN.md — VPS live verification + VERIFICATION.md
 
 **Success criteria:**
 1. A tool call gated by `trust_gate` creates an approval row visible in the AgentOS approvals list.
