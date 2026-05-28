@@ -126,7 +126,7 @@ def make_knowledge() -> Knowledge:
             table_name="vault",
             db_url=dsn,
             embedder=SentenceTransformerEmbedder(
-                id="sentence-transformers/all-MiniLM-L6-v2"
+                id="BAAI/bge-small-en-v1.5"
             ),
             search_type=SearchType.hybrid,
             reranker=SentenceTransformerReranker(),
@@ -184,8 +184,13 @@ def _existing_rows(knowledge: Knowledge) -> dict[str, dict[str, Any]]:
 def reindex(
     vault_path: Path | None = None,
     knowledge: Knowledge | None = None,
+    *,
+    force: bool = False,
 ) -> ReindexSummary:
     """Walk ``vault_path/**/*.md``, sha256 each file, skip unchanged, insert changed.
+
+    Pass ``force=True`` to re-embed all files regardless of stored sha256 (required
+    after switching the embedder model, since content hashes won't detect the change).
 
     Per-file errors are isolated. Returns a populated ``ReindexSummary``.
     """
@@ -207,7 +212,7 @@ def reindex(
         )
         return ReindexSummary(0, 0, 0, 0, 0.0)
 
-    existing = _existing_rows(knowledge)
+    existing = {} if force else _existing_rows(knowledge)
 
     indexed = 0
     skipped = 0
@@ -311,10 +316,11 @@ def reindex(
 def cli_main(argv: list[str] | None = None) -> int:
     argv = list(argv) if argv is not None else []
     if "--reindex" not in argv:
-        print("Usage: python -m agentos.knowledge --reindex")
+        print("Usage: python -m agentos.knowledge --reindex [--force]")
         return 1
+    force = "--force" in argv
     knowledge = make_knowledge()
-    summary = reindex(knowledge=knowledge)
+    summary = reindex(knowledge=knowledge, force=force)
     print(
         f"Indexed {summary.indexed} files "
         f"({summary.skipped} skipped, {summary.errors} errors) "

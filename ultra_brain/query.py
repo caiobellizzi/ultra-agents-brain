@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import subprocess
@@ -9,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import llm
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -72,6 +75,37 @@ class QmdClient:
         return hits[:limit]
 
 
+class KnowledgeClient:
+    """Query vault via Agno KnowledgeSurface (pgvector) when POSTGRES_DSN_KNOWLEDGE is set."""
+
+    def __init__(self, vault_root: Path) -> None:
+        self.vault_root = vault_root
+        self._knowledge: object | None = None
+
+    def available(self) -> bool:
+        return bool(os.getenv("POSTGRES_DSN_KNOWLEDGE"))
+
+    def _get_knowledge(self) -> object:
+        if self._knowledge is None:
+            from agentos.knowledge import make_knowledge  # local import to avoid circular
+            self._knowledge = make_knowledge()
+        return self._knowledge
+
+    def search(self, query: str, *, limit: int = 8) -> list[SearchHit]:
+        knowledge = self._get_knowledge()
+        if not getattr(knowledge, "vector_db", None):
+            return []
+        docs = knowledge.search(query, max_results=limit)
+        hits: list[SearchHit] = []
+        for doc in docs:
+            rel = (doc.meta_data or {}).get("rel_path") or doc.name or ""
+            path = self.vault_root / rel if rel else self.vault_root
+            score = max(1, int((doc.reranking_score or 1.0) * 100))
+            snippet = (doc.content or "")[:240].strip()
+            hits.append(SearchHit(path, 0, score, snippet))
+        return hits
+
+
 def synthesize_answer(
     question: str,
     hits: list[SearchHit],
@@ -126,6 +160,17 @@ def query_vault(
     prefer_qmd: bool = True,
     llm_model: str | None = None,
 ) -> str:
+    # Primary: pgvector KnowledgeSurface when POSTGRES_DSN_KNOWLEDGE is configured
+    kc = KnowledgeClient(vault_root)
+    if kc.available():
+        try:
+            hits = kc.search(question, limit=limit)
+            if hits:
+                return synthesize_answer(question, hits, vault_root=vault_root, llm_model=llm_model)
+        except Exception as exc:
+            log.warning("KnowledgeClient search failed, falling back to file-based: %s", exc)
+
+    # Fallback: qmd CLI → ripgrep keyword search
     client = QmdClient(vault_root) if prefer_qmd else None
     hits = client.search(question, limit=limit) if client else RipgrepRetriever(vault_root).search(question, limit=limit)
     return synthesize_answer(question, hits, vault_root=vault_root, llm_model=llm_model)
