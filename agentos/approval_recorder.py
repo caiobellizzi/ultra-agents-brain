@@ -66,8 +66,15 @@ class ApprovalRecorder:
                 run_id = approval_data.get("run_id")
                 agent_id = approval_data.get("agent_id")
                 approval_id = (result or {}).get("approval_id") or approval_data.get("approval_id")
-                # Truncate tool_args — never log raw object (T-14-03)
-                tool_args_summary = str(approval_data.get("tool_args", {}))[:120]
+                # Structural summary — log key names + value shapes, never raw values (T-14-03)
+                _raw_args = approval_data.get("tool_args") or {}
+                if isinstance(_raw_args, dict):
+                    tool_args_summary = "{" + ", ".join(
+                        f"{k}: {type(v).__name__}[{len(str(v))}]"
+                        for k, v in _raw_args.items()
+                    ) + "}"
+                else:
+                    tool_args_summary = f"{type(_raw_args).__name__}[{len(str(_raw_args))}]"
                 recorder._emit(
                     op="create",
                     approval_id=approval_id,
