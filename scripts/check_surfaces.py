@@ -33,6 +33,7 @@ def check_surfaces() -> int:
 
     try:
         import psycopg2
+        import psycopg2.sql
     except ImportError as exc:
         print(f"[error] cannot import psycopg2: {exc}", file=sys.stderr)
         return 1
@@ -50,7 +51,7 @@ def check_surfaces() -> int:
         try:
             conn = psycopg2.connect(conn_str)
             cur = conn.cursor()
-            cur.execute(f"SELECT COUNT(*) FROM {table_name}")  # noqa: S608
+            cur.execute(psycopg2.sql.SQL("SELECT COUNT(*) FROM {}").format(psycopg2.sql.Identifier(table_name)))
             row = cur.fetchone()
             count = row[0] if row else 0
             cur.close()
