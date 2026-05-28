@@ -573,7 +573,9 @@ async def handle_callback(
     # AND confirmed=True to execute the tool. Setting requires_confirmation=False
     # skips the execution branch entirely. Keep the original flag, just flip
     # `confirmed`.
-    cached = _PAUSED_TOOLS.pop(run_id, None)
+    # Peek at cached value without popping — pop only after successful POST so
+    # the entry remains available for retry if the POST fails (WR-03).
+    cached = _PAUSED_TOOLS.get(run_id)
     if cached:
         tools_list: list[dict] = []
         for t in cached:
@@ -611,6 +613,7 @@ async def handle_callback(
     # callback is just the duplicate. Stay silent — user-facing error would
     # contradict the earlier "approved" reply we already sent.
     if r.status_code == 409 and "already continued" in r.text:
+        _PAUSED_TOOLS.pop(run_id, None)
         log.info("Continue 409 (already continued) — duplicate callback for run %s ignored", run_id)
         return
 
@@ -621,6 +624,9 @@ async def handle_callback(
         _RESOLVED_RUNS.discard(run_id)
         await send_message(client, chat_id, f"AgentOS error resuming run: {r.status_code}")
         return
+
+    # POST succeeded — now safe to evict the cached tools entry.
+    _PAUSED_TOOLS.pop(run_id, None)
 
     if not confirmed:
         await send_message(client, chat_id, "Action denied.")
