@@ -129,6 +129,48 @@ model_list:
       mode: chat
       supports_response_schema: false
 
+  # Workshop pipeline aliases
+  - model_name: coder-worker
+    litellm_params:
+      model: nvidia_nim/deepseek-ai/deepseek-v4-flash
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 120
+      max_retries: 1
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  - model_name: reviewer-model
+    litellm_params:
+      model: nvidia_nim/nvidia/llama-3.3-nemotron-super-49b-v1
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 120
+      max_retries: 1
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  - model_name: cheap-fast
+    litellm_params:
+      model: nvidia_nim/meta/llama-3.1-8b-instruct
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 60
+      max_retries: 1
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+
+  - model_name: cloud-openai
+    litellm_params:
+      model: gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+      timeout: 60
+      max_retries: 2
+    model_info:
+      mode: chat
+      supports_response_schema: true
+
   - model_name: cloud-groq
     litellm_params:
       model: groq/llama-3.3-70b-versatile
