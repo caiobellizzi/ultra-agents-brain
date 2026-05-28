@@ -113,7 +113,7 @@ class ApprovalRecorder:
                     approval_id=approval_id,
                     tool_name=None,
                     tool_call_id=None,
-                    run_id=None,
+                    run_id=kwargs.get("run_id"),
                     agent_id=None,
                     status_from=expected_status,
                     status_to=status_to,
