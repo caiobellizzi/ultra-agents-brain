@@ -14,7 +14,7 @@ from pathlib import Path
 
 def test_pull_before_push_delete() -> None:
     """Script structure test: pull pass (no --delete) must precede push pass (--delete)."""
-    script = Path("ops/sync-vault-to-vps.sh").read_text()
+    script = (Path(__file__).parents[2] / "ops/sync-vault-to-vps.sh").read_text()
     rsync_lines = [
         line.strip()
         for line in script.splitlines()
