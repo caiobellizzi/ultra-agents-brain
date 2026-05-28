@@ -6,7 +6,7 @@ Reads today's Inbox stubs → LLM synthesis → vault file + Telegram summary.
 from __future__ import annotations
 
 import os
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from . import llm
@@ -60,22 +60,28 @@ Rules:
 """
 
 
-def _read_inbox_items(vault_root: Path, *, day: date) -> list[dict]:
+def _read_inbox_items(vault_root: Path, *, day: date, lookback_days: int = 2) -> list[dict]:
     inbox_dir = vault_root / "Inbox"
     if not inbox_dir.exists():
         return []
     items = []
-    for path in sorted(inbox_dir.glob(f"{day.isoformat()}-*.md")):
-        text = path.read_text(encoding="utf-8")
-        lines = text.splitlines()
-        title = lines[0].lstrip("# ").strip() if lines else path.stem
-        url = published = ""
-        for line in lines[1:]:
-            if line.startswith("source::"):
-                url = line.split("::", 1)[1].strip()
-            elif line.startswith("published::"):
-                published = line.split("::", 1)[1].strip()
-        items.append({"title": title, "url": url, "published": published})
+    seen_paths: set[Path] = set()
+    for offset in range(lookback_days):
+        check_day = day - timedelta(days=offset)
+        for path in sorted(inbox_dir.glob(f"{check_day.isoformat()}-*.md")):
+            if path in seen_paths:
+                continue
+            seen_paths.add(path)
+            text = path.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            title = lines[0].lstrip("# ").strip() if lines else path.stem
+            url = published = ""
+            for line in lines[1:]:
+                if line.startswith("source::"):
+                    url = line.split("::", 1)[1].strip()
+                elif line.startswith("published::"):
+                    published = line.split("::", 1)[1].strip()
+            items.append({"title": title, "url": url, "published": published})
     return items
 
 
