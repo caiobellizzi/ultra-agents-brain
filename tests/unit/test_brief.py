@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from ultra_brain.brief import _filter_unseen, _read_inbox_items
+from ultra_brain.brief import _filter_unseen, _read_inbox_items, _telegram_summary
 from ultra_brain.monitor import DedupStore
 
 
@@ -79,6 +79,31 @@ def test_no_duplicates_across_days() -> None:
         unseen = _filter_unseen(items, store)
 
         assert unseen == []
+
+
+@pytest.mark.parametrize(
+    "bullet_prefix",
+    [
+        "- ",
+        "* ",
+        "*\t",
+    ],
+)
+def test_telegram_summary_bullet_prefixes(bullet_prefix: str) -> None:
+    """_telegram_summary must normalise '- ', '* ', and '*\\t' bullets to '• '."""
+    day = date(2026, 1, 1)
+    brief = (
+        "# Daily AI Brief — 2026-01-01\n"
+        "\n"
+        "## 1) Executive Summary\n"
+        f"{bullet_prefix}First point\n"
+        f"{bullet_prefix}Second point\n"
+        "\n"
+        "## 2) Key Developments\n"
+    )
+    result = _telegram_summary(brief, day)
+    assert "• First point" in result, f"prefix {bullet_prefix!r} not normalised to '• '"
+    assert "• Second point" in result
 
 
 def test_lookback_only_reads_inbox_subdir() -> None:

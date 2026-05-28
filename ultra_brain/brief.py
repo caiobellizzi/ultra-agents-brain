@@ -113,8 +113,9 @@ def _telegram_summary(brief_text: str, day: date) -> str:
         if in_exec:
             if line.startswith("## "):
                 break
-            if line.startswith("- "):
-                bullets.append(line)
+            stripped = line.lstrip()
+            if stripped.startswith(("- ", "* ", "*\t")):
+                bullets.append("• " + stripped[2:].lstrip())
                 if len(bullets) >= 5:
                     break
     header = f"🤖 *Daily AI Brief — {day.isoformat()}*\n\n"
