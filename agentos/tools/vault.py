@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 
+from agno.approval.decorator import approval
 from agno.tools import tool
 
 from ultra_brain import express, ingest, lint, monitor, query, research, review
@@ -32,6 +33,7 @@ def _ingest_to_vault_impl(source: str) -> str:
     return str(getattr(result, "path", result))
 
 
+@approval
 @tool(requires_confirmation=True)
 def ingest_to_vault(source: str) -> str:
     """Extract content from a URL or local file and file it into the vault.
@@ -53,6 +55,7 @@ def _research_topic_impl(topic: str, *, max_workers: int = 3) -> str:
     return str(path)
 
 
+@approval
 @tool(requires_confirmation=True)
 def research_topic(topic: str, *, max_workers: int = 3) -> str:
     """Plan and execute multi-source research on a topic, file results in vault.
