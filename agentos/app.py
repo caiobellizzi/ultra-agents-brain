@@ -94,5 +94,7 @@ app = agent_os.get_app()
 # The registry lives in the vault's _system/ dir (owned by uabrain); the
 # Workshop (uws) cannot write there, so it PUTs the computed document here.
 from agentos.workshop_registry import register_workshop_routes
+from agentos.workshop_queue import register_queue_routes
 
 register_workshop_routes(app)
+register_queue_routes(app)

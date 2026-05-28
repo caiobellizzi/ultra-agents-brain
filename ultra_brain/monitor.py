@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fcntl
 import hashlib
 import json
 import ssl
@@ -13,6 +12,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+
+from .vault import move_to_trash
 
 
 @dataclass(frozen=True)
@@ -43,16 +44,12 @@ class DedupStore:
         return set(json.loads(self.path.read_text(encoding="utf-8")).get("seen", []))
 
     def add_new(self, keys: list[str]) -> list[str]:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        lock_path = self.path.with_suffix(".lock")
-        with open(lock_path, "w") as lock_fh:
-            fcntl.flock(lock_fh, fcntl.LOCK_EX)
-            seen = self.load()
-            new = [key for key in keys if key not in seen]
-            if new:
-                seen.update(new)
-                self.path.write_text(json.dumps({"seen": sorted(seen)}, indent=2) + "\n", encoding="utf-8")
-            # lock released on context-manager exit
+        seen = self.load()
+        new = [key for key in keys if key not in seen]
+        if new:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            seen.update(new)
+            self.path.write_text(json.dumps({"seen": sorted(seen)}, indent=2) + "\n", encoding="utf-8")
         return new
 
 
@@ -171,17 +168,17 @@ def run_poll(
             articles_dir.mkdir(parents=True, exist_ok=True)
             final_dest = articles_dir / filename
             final_dest.write_bytes(dest.read_bytes())
-            dest.unlink()
+            move_to_trash(dest)
             if dest.exists():
-                raise RuntimeError(f"iCloud unlink failed for {dest.name} — manual cleanup required")
+                raise RuntimeError(f"Finder trash failed for {dest.name} — manual cleanup required")
         elif item_score < 0.3:
             culled_dir = vault_root / "03-Archives" / "auto-culled"
             culled_dir.mkdir(parents=True, exist_ok=True)
             final_dest = culled_dir / filename
             final_dest.write_bytes(dest.read_bytes())
-            dest.unlink()
+            move_to_trash(dest)
             if dest.exists():
-                raise RuntimeError(f"iCloud unlink failed for {dest.name} — manual cleanup required")
+                raise RuntimeError(f"Finder trash failed for {dest.name} — manual cleanup required")
 
     append_log(
         log_path,
