@@ -24,7 +24,7 @@
 | 12 | Evals Surface Activation               | 4/4 | Complete    | 2026-05-24 |
 | 13 | Knowledge Surface Activation           | 3/3 | Complete   | 2026-05-23 |
 | 14 | Approvals Surface Activation           | 3/3 | Complete   | 2026-05-28 |
-| 15 | worker.monitor Polish + Final Verify   | Daily-brief date bug fixed; vault-sync delete bug fixed; surface-smoke verification doc    | MON-01, MON-02, OBS-02                        | 4        |
+| 15 | worker.monitor Polish + Final Verify   | 2/3 | In Progress|  |
 
 **6 phases · 16 requirements · 100% coverage**
 
