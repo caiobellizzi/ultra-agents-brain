@@ -140,6 +140,30 @@ model_list:
       mode: chat
       supports_response_schema: false
 
+  # Workshop planner alias — DeepSeek V4 Flash with thinking, same reasoning tier as orchestrator
+  - model_name: planner-reasoner
+    litellm_params:
+      model: nvidia_nim/deepseek-ai/deepseek-v4-flash
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 300
+      max_retries: 1
+      extra_body:
+        chat_template_kwargs:
+          thinking: true
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
+  - model_name: planner-reasoner-failover
+    litellm_params:
+      model: nvidia_nim/qwen/qwen3.5-397b-a17b
+      api_key: os.environ/NVIDIA_NIM_API_KEY
+      timeout: 300
+      max_retries: 1
+    model_info:
+      mode: chat
+      supports_response_schema: false
+
   - model_name: reviewer-model
     litellm_params:
       model: nvidia_nim/nvidia/llama-3.3-nemotron-super-49b-v1
@@ -189,6 +213,8 @@ litellm_settings:
   fallbacks:
     - orchestrator: ["orchestrator-failover", "cloud-sonnet"]
     - orchestrator-failover: ["cloud-sonnet"]
+    - planner-reasoner: ["planner-reasoner-failover", "cloud-sonnet"]
+    - planner-reasoner-failover: ["cloud-sonnet"]
     - research-worker: ["research-worker-failover", "cloud-sonnet"]
     - research-worker-failover: ["cloud-sonnet"]
     - default-worker: ["default-worker-nim", "default-worker-nim-failover"]
