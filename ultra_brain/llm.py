@@ -44,4 +44,7 @@ def complete(
     )
     with urllib.request.urlopen(req) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-    return data["choices"][0]["message"]["content"]
+    choices = data.get("choices")
+    if not choices:
+        raise ValueError(f"LiteLLM returned no choices; full response: {data}")
+    return choices[0]["message"]["content"]
