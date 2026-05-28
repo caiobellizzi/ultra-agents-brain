@@ -401,7 +401,7 @@ class TestApprovalBridge(unittest.TestCase):
 
     RUN_ID = "aaaabbbb-cccc-dddd-eeee-ffffffffffff"
     AGENT_ID = "ingest"
-    TOOL_CALL_ID = "tcid-0001-0002-0003-000400000005"
+    TOOL_CALL_ID = "00010002-0003-0004-0005-000600070008"
     APPROVAL_ID = "ap-001"
     CHAT_ID = 123456
     TG_USER_ID = 123456
