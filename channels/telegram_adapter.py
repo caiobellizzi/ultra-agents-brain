@@ -18,18 +18,53 @@ import json
 import logging
 import os
 import re
+import time
+from collections import OrderedDict
 from typing import Any
 
 import httpx
 from dotenv import load_dotenv
 
+_LRU_MAX = 1000  # max entries for bounded in-memory caches
+
+
+class _BoundedDict(OrderedDict):
+    """OrderedDict capped at _LRU_MAX entries; evicts oldest on insert."""
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        super().__setitem__(key, value)
+        if len(self) > _LRU_MAX:
+            self.popitem(last=False)
+
+
+class _BoundedSet:
+    """Set-like container backed by _BoundedDict; evicts oldest on add."""
+
+    def __init__(self) -> None:
+        self._d: _BoundedDict = _BoundedDict()
+
+    def add(self, key: Any) -> None:
+        self._d[key] = True
+
+    def discard(self, key: Any) -> None:
+        self._d.pop(key, None)
+
+    def __contains__(self, key: Any) -> bool:
+        return key in self._d
+
+    def clear(self) -> None:
+        self._d.clear()
+
+
 # In-memory cache of paused tool_execution dicts, keyed by run_id.
 # Needed because Agno's /continue endpoint REPLACES run_response.tools with the
 # payload, so we must echo back the full original dict plus `confirmed`.
-_PAUSED_TOOLS: dict[str, list[dict]] = {}
+# Bounded to _LRU_MAX entries to prevent unbounded growth (CR-02).
+_PAUSED_TOOLS: _BoundedDict = _BoundedDict()
 # Tracks run_ids that have already been resolved (approved or denied) to
 # silently drop duplicate callback events (e.g. double-tap on Approve).
-_RESOLVED_RUNS: set[str] = set()
+# Bounded to _LRU_MAX entries to prevent unbounded growth (CR-02).
+_RESOLVED_RUNS: _BoundedSet = _BoundedSet()
 
 load_dotenv()
 
