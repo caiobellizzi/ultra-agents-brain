@@ -138,3 +138,17 @@ No automated-verifiable gaps found. All must-have truths that can be verified pr
 
 _Verified: 2026-05-28T19:05:00-03:00_
 _Verifier: Claude (gsd-verifier)_
+
+## Live VPS Evidence (2026-05-28)
+
+Human-verified surface row counts from `agno_sessions` and `agno_knowledge` databases:
+
+| Surface | Table | Rows | Status |
+|---------|-------|------|--------|
+| Memory | `agno_memories` | 74 | ✅ populated |
+| Evals | `agno_eval_runs` | 155 | ✅ populated |
+| Knowledge | `agno_knowledge` | 3,291 | ✅ populated |
+| Approvals | `agno_approvals` | 4 | ✅ populated |
+| Vault | `vault` (agno_knowledge DB) | 3,316 | ✅ populated |
+
+All 4 surfaces confirmed populated. OBS-02 goal achieved.
