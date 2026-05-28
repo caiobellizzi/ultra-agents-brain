@@ -1,110 +1,153 @@
 ---
 phase: 14-approvals-surface-activation
-reviewed: 2026-05-28T13:57:00-03:00
+reviewed: 2026-05-28T14:15:00-03:00
 depth: standard
-files_reviewed: 4
+files_reviewed: 6
 files_reviewed_list:
-  - agentos/approval_recorder.py
   - agentos/app.py
+  - agentos/approval_recorder.py
   - agentos/tools/vault.py
   - channels/telegram_adapter.py
+  - tests/test_approval_recorder.py
+  - tests/test_telegram_adapter.py
 findings:
-  critical: 3
+  critical: 4
   warning: 4
   info: 3
-  total: 10
+  total: 11
 status: issues_found
 ---
 
 # Phase 14: Code Review Report
 
-**Reviewed:** 2026-05-28T13:57:00-03:00
+**Reviewed:** 2026-05-28T14:15:00-03:00
 **Depth:** standard
-**Files Reviewed:** 4
+**Files Reviewed:** 6
 **Status:** issues_found
 
 ## Summary
 
-Phase 14 adds the HITL approvals surface: `approval_recorder.py` monkey-patches three Agno `PostgresDb` approval methods to emit OBS-01 structured logs; `app.py` wires the patch at startup; `vault.py` adds `@approval` + `@tool(requires_confirmation=True)` to two HITL tools; and `telegram_adapter.py` adds `_resolve_approval_row` to reconcile the native approval row before calling `/continue`.
+Phase 14 adds the HITL approvals surface: `approval_recorder.py` monkey-patches three
+Agno DB approval methods to emit OBS-01 structured logs; `app.py` wires the patch at
+startup; `vault.py` applies `@approval` + `@tool(requires_confirmation=True)` to two
+HITL tools; and `telegram_adapter.py` bridges Telegram inline button callbacks to the
+Agno `/approvals` resolution API.
 
-The overall architecture is sound and the threat mitigations in `approval_recorder.py` are well-considered. However, three critical issues surfaced: (1) `tool_args_summary` logs 120 characters of raw `str()` output from potentially sensitive vault content — the stated truncation is insufficient protection; (2) `_RESOLVED_RUNS` and `_PAUSED_TOOLS` are unbounded in-memory sets/dicts that grow forever, creating a memory leak and a stale-state attack surface; (3) the `@approval` / `@tool` decorator stack in `vault.py` is applied in a potentially wrong order that may cause `@approval` to wrap the Agno `ToolCallInfo` wrapper instead of the underlying function.
+Four critical issues were found: (1) `tool_args_summary` writes up to 120 raw characters
+of tool argument values into the OBS log -- sufficient to leak a full private file path
+or sensitive research query, defeating the stated T-14-03 mitigation; (2) `_RESOLVED_RUNS`
+and `_PAUSED_TOOLS` are unbounded module-level structures with no TTL eviction;
+(3) the decorator order on both HITL tools in `vault.py` is inverted, placing `@approval`
+outside `@tool`; and (4) two tests in `test_telegram_adapter.py` assert the routing
+default is `"supervisor"` but the implementation returns `"chat"` -- these tests fail
+today and prove the test suite was not run after the Phase 11-02 routing change.
 
 ---
 
 ## Critical Issues
 
-### CR-01: `tool_args_summary` logs raw vault content — T-14-03 mitigation is incomplete
+### CR-01: `tool_args_summary` logs raw argument values -- T-14-03 mitigation is a length cap, not a data filter
 
 **File:** `agentos/approval_recorder.py:70`
 
-**Issue:** The docstring claims "raw args never logged" and T-14-03 is listed as mitigated by truncating to `str(args)[:120]`. However, `str({})` on a vault ingest payload (e.g. `{'source': 'file:///srv/second-brain/private/diary.md'}`) or a research topic (e.g. `{'topic': 'my health condition ...'`) faithfully encodes the full first 120 characters of potentially sensitive PII. The truncation is a length cap, not a data-class filter. A private file path or a sensitive research query fits entirely in 120 chars. The OBS-01 log is written to `agentos.approval` which propagates to the root logger — it will appear in application logs, log aggregators, and any log-shipping pipeline.
+**Issue:** The module docstring declares T-14-03 mitigated: "tool_args truncated to
+`str(args)[:120]`; raw args never logged." This claim is false.
+`str({"source": "file:///srv/second-brain/private/diary.md"})` is 52 characters and fits
+entirely within the 120-char cap, emitted verbatim to the `agentos.approval` logger.
+A `research_topic` call with `topic="my mental health situation and anxiety"` similarly
+fits. The log propagates to every configured log shipper, aggregator, and stdout sink.
+The stated invariant ("raw args never logged") is violated by design.
 
-**Fix:** Replace the raw-str truncation with explicit field extraction that logs only safe metadata:
+**Fix:** Replace the raw `str()` truncation with a structural summary that logs only
+key names and value shapes, never values:
 
 ```python
-# Approved: log only key names and value type/length, never the value itself
 tool_args_summary = ", ".join(
     f"{k}:<{type(v).__name__}:{len(str(v))}chars>"
     for k, v in (approval_data.get("tool_args") or {}).items()
 )[:120]
 ```
 
-Alternatively, maintain an explicit allowlist of args that are safe to log (e.g. `max_workers`) and mask everything else.
+Alternatively, maintain an explicit allowlist of safe-to-log arg names (e.g.
+`max_workers`) and mask everything else.
 
 ---
 
-### CR-02: `_RESOLVED_RUNS` and `_PAUSED_TOOLS` grow without bound — memory leak + stale SSRF surface
+### CR-02: `_RESOLVED_RUNS` and `_PAUSED_TOOLS` grow without bound -- memory leak and stale tool replay risk
 
-**File:** `channels/telegram_adapter.py:32,139`
+**File:** `channels/telegram_adapter.py:29-32`
 
-**Issue:** `_RESOLVED_RUNS` is a module-level `set[str]` and `_PAUSED_TOOLS` is a `dict[str, list[dict]]`. Run IDs are added to `_RESOLVED_RUNS` on first approval (line 139) and never evicted. `_PAUSED_TOOLS` pops on success (line 157) but not on denial-without-continue or on adapter restart crash paths. Over the lifetime of the process (the adapter runs continuously), both structures accumulate indefinitely. On a busy instance this is a slow memory leak; more importantly, a stale `_PAUSED_TOOLS` entry for an old `run_id` can be replayed if a crafted callback arrives with that run_id after the original run has expired from the AgentOS side — the cached `tool_execution` dict will be sent verbatim to `/continue`, potentially re-triggering a tool in a new context.
+**Issue:** `_RESOLVED_RUNS` is a module-level `set[str]`. Run IDs are added at line 538
+and only conditionally discarded on specific error paths. In a long-running process every
+approved or denied run accumulates a permanent entry. `_PAUSED_TOOLS` pops on the success
+path (line 556) but is left populated when `_resolve_approval_row` returns `False`
+(lines 543-545 discard from `_RESOLVED_RUNS` for retry but no corresponding
+`_PAUSED_TOOLS` cleanup occurs). Over process lifetime both structures grow without bound.
 
-**Fix:**
+Beyond memory, stale `_PAUSED_TOOLS` entries create a correctness hazard: a crafted
+duplicate callback arriving after the original run has expired on the AgentOS side will
+replay the cached `tool_execution` dict verbatim to `/continue`, potentially
+re-triggering a tool call in an unrelated context.
+
+**Fix:** Replace the bare `set` with a bounded LRU map with TTL. Add at module level:
 
 ```python
 import time
 from collections import OrderedDict
 
 _MAX_CACHE = 500
-_RESOLVED_RUNS: dict[str, float] = OrderedDict()  # run_id -> timestamp
-_PAUSED_TOOLS: dict[str, list[dict]] = {}
+_TTL_SECONDS = 3600
+
+_RESOLVED_RUNS: OrderedDict  # run_id -> monotonic timestamp (replace bare set)
 
 def _mark_resolved(run_id: str) -> None:
     _RESOLVED_RUNS[run_id] = time.monotonic()
     if len(_RESOLVED_RUNS) > _MAX_CACHE:
-        _RESOLVED_RUNS.popitem(last=False)  # evict oldest
+        _RESOLVED_RUNS.popitem(last=False)
 
 def _is_resolved(run_id: str) -> bool:
     ts = _RESOLVED_RUNS.get(run_id)
     if ts is None:
         return False
-    if time.monotonic() - ts > 3600:  # 1-hour TTL
+    if time.monotonic() - ts > _TTL_SECONDS:
         del _RESOLVED_RUNS[run_id]
         return False
     return True
+
+def _release_resolved(run_id: str) -> None:
+    _RESOLVED_RUNS.pop(run_id, None)
+    _PAUSED_TOOLS.pop(run_id, None)
 ```
 
-Replace `_RESOLVED_RUNS.add(run_id)` / `_RESOLVED_RUNS.discard(run_id)` / `run_id in _RESOLVED_RUNS` with the above helpers.
+Replace `_RESOLVED_RUNS.add`, `run_id in _RESOLVED_RUNS`, and `_RESOLVED_RUNS.discard`
+calls with the helpers above.
 
 ---
 
-### CR-03: Decorator order on HITL tools is inverted — `@approval` wraps `@tool` output, not the raw callable
+### CR-03: Decorator order on HITL tools is inverted -- `@approval` wraps the Agno tool descriptor, not the callable
 
 **File:** `agentos/tools/vault.py:36-47, 58-70`
 
-**Issue:** Python decorators apply bottom-up. The current stack is:
+**Issue:** Python applies decorators bottom-up. The current stack:
 
 ```python
-@approval          # applied second — wraps the result of @tool(...)
-@tool(requires_confirmation=True)  # applied first — wraps ingest_to_vault
+@approval                          # applied second -- wraps the @tool result
+@tool(requires_confirmation=True)  # applied first -- converts def to Agno descriptor
 def ingest_to_vault(source: str) -> str:
 ```
 
-`@tool(requires_confirmation=True)` converts `ingest_to_vault` into an Agno `ToolCallInfo` object (or similar wrapper). `@approval` then wraps that wrapper. The correct intended order (based on Agno's decorator contract) should be `@tool` outermost so that Agno's tool registration machinery sees the function decorated by `@approval`. If `@approval` is the Agno approval-gate decorator, it must be the innermost layer so that it wraps the raw Python callable — not the already-processed tool descriptor.
+`@tool(requires_confirmation=True)` runs first and converts `ingest_to_vault` into an
+Agno tool descriptor. `@approval` then wraps that descriptor. If `@approval` is intended
+to gate the raw Python callable, it is instead receiving an already-processed Agno object.
+The gate is either bypassed or misfiring depending on how Agno resolves the callable at
+dispatch time. Smoke tests may pass if Agno introspects through the outer wrapper, but
+the behaviour under `deep_copy` and class-level agent reset (app.py lines 64-71) is
+undefined.
 
-The root cause noted in the task context ("@approval decorator was missing") was fixed in commit 2cb0eb9, but the stack order was not verified. If tools appear to work in smoke tests, it may be because Agno's `@tool` unwraps the callable to inspect it; however, the behaviour under `deep_copy` and class-level agent reset (discussed in `app.py` comment) is undefined when the decorator chain is inverted.
+Confirm: `type(ingest_to_vault)` in a REPL should return an Agno tool type. If it
+returns whatever `@approval` produces, the order is wrong.
 
-**Fix:** Reverse the decorator order so `@approval` is innermost:
+**Fix:** Reverse so `@approval` is innermost:
 
 ```python
 @tool(requires_confirmation=True)
@@ -118,25 +161,54 @@ def research_topic(topic: str, *, max_workers: int = 3) -> str:
     ...
 ```
 
-Verify by calling `type(ingest_to_vault)` in a REPL — it should be an Agno tool type, not whatever `@approval` returns.
+---
+
+### CR-04: Two tests assert routing default is `"supervisor"` but code returns `"chat"` -- test suite fails
+
+**File:** `tests/test_telegram_adapter.py:47-48, 64`
+
+**Issue:** `test_plain_text_routes_to_supervisor` (line 47-48) calls
+`_agent_id_for("Hello, how are you?")` and asserts `"supervisor"`.
+`test_unknown_command_falls_back_to_supervisor` (line 64) asserts the same for
+`/unknown something`. The implementation at `telegram_adapter.py:248` returns `"chat"` as
+the default -- changed in the Phase 11-02 follow-up (documented in the inline comment at
+lines 228-235 of the adapter). Both assertions will fail. The test suite cannot pass as
+written, which undermines confidence in the security tests (`TestCallbackDataValidation`,
+`TestApprovalBridge`) in the same file.
+
+**Fix:**
+
+```python
+def test_plain_text_routes_to_chat(self):
+    agent = self.mod._agent_id_for("Hello, how are you?")
+    self.assertEqual(agent, "chat")
+
+def test_unknown_command_falls_back_to_chat(self):
+    agent = self.mod._agent_id_for("/unknown something")
+    self.assertEqual(agent, "chat")
+```
 
 ---
 
 ## Warnings
 
-### WR-01: Fallback `approval_id` selection picks `rows[0]` — wrong row on multi-tool runs
+### WR-01: Fallback `rows[0]` silently resolves the wrong approval on multi-tool runs
 
-**File:** `channels/telegram_adapter.py:59-60`
+**File:** `channels/telegram_adapter.py:458-459`
 
-**Issue:** When no row's `tool_call_id` matches, `_resolve_approval_row` falls back to `rows[0]`. On a run that pauses with multiple tool calls (e.g., two HITL tools queued), `rows[0]` may be the row for a *different* tool than the one the user tapped. This silently resolves the wrong approval row, which means one tool gets its DB record updated while the other does not, leading to an inconsistent approval state.
+**Issue:** When no row's `tool_execution.tool_call_id` matches the one from
+`callback_data`, the code falls back to `rows[0]`. On a run paused with two simultaneous
+HITL tool calls, tapping "Approve" on tool B may update tool A's DB row if tool B's
+`tool_call_id` appears second in the query result. The run then has inconsistent state:
+tool A's row is resolved, tool B's row remains pending, and `/continue` proceeds with
+the wrong confirmation recorded.
 
-**Fix:** Remove the fallback and treat "no matching row" as a hard failure:
+**Fix:** Remove the fallback and treat no-match as a hard failure:
 
 ```python
 if approval_id is None:
     log.warning(
-        "No pending approval row matched tool_call_id %s for run %s "
-        "(rows available: %s)",
+        "No pending approval row matched tool_call_id=%s for run=%s (available: %s)",
         tool_call_id,
         run_id,
         [r.get("id") for r in rows],
@@ -146,33 +218,80 @@ if approval_id is None:
 
 ---
 
-### WR-02: `tool_call_id` is not validated — arbitrary URL segment in `/approvals/{id}/resolve`
+### WR-02: `tool_call_id` from `callback_data` is not UUID-validated -- inconsistent with `run_id` guard
 
-**File:** `channels/telegram_adapter.py:68`
+**File:** `channels/telegram_adapter.py:518, 455`
 
-**Issue:** `approval_id` is extracted from the GET `/approvals` response — it comes from the server, so it is relatively trusted. However, `tool_call_id` comes from Telegram `callback_data`, is split on `:` and used directly in the GET query param and passed to `_resolve_approval_row`. `tool_call_id` is then matched against `row["tool_execution"]["tool_call_id"]` in the DB response, which is safe. But `run_id` is validated by UUID regex (line 126), while `tool_call_id` receives no validation at all. A crafted `callback_data` with a `tool_call_id` like `../../../admin` would propagate into the GET params and be matched against DB data — it would not find a row and return `False`, but it is still untrusted user data touching a query parameter without sanitisation.
+**Issue:** `run_id` is validated against `_UUID_RE` (line 525) before use. `tool_call_id`
+originates from the same untrusted `callback_data` string (line 518) and receives no
+equivalent validation. It is used directly in the match expression at line 455 and passed
+into GET query params at line 440. The current matching is against DB data (safe), but
+the absence of validation is inconsistent with the explicit `run_id` guard and leaves a
+gap for future callers or log injection if error messages include the raw value.
 
-**Fix:** Add a UUID regex check for `tool_call_id` alongside the existing `run_id` check:
+**Fix:** Add a UUID check for `tool_call_id` immediately after the `run_id` check:
 
 ```python
 if not _UUID_RE.match(tool_call_id):
-    log.warning("callback_data contains invalid tool_call_id %r — ignoring", tool_call_id)
+    log.warning("callback_data contains invalid tool_call_id %r -- ignoring", tool_call_id)
     return
 ```
 
 ---
 
-### WR-03: `wrapped_update_approval` does not log `run_id` — OBS correlation is broken for resolve events
+### WR-03: `_PAUSED_TOOLS` is popped before `/continue` POST -- retry after continue failure uses incomplete stub
 
-**File:** `agentos/approval_recorder.py:96-126`
+**File:** `channels/telegram_adapter.py:556, 583-602`
 
-**Issue:** `wrapped_update_approval(approval_id, expected_status, **kwargs)` emits a log record with `run_id=None` (line 109). The `update_approval` Agno method signature does not receive `run_id` — but the original `result` dict returned by the DB call likely contains it. Not including `run_id` in resolve-event logs breaks the ability to correlate `create` → `resolve` → `run_status` events in a log query by `run_id` alone; analysts must join on `approval_id` instead.
+**Issue:** `_PAUSED_TOOLS.pop(run_id, None)` executes at line 556, before the `/continue`
+POST at line 583. If the POST fails with a non-409 status (lines 597-602),
+`_RESOLVED_RUNS.discard(run_id)` releases the retry gate, but `_PAUSED_TOOLS` is already
+empty. The subsequent retry tap uses the minimal one-element stub (lines 565-568) that
+omits `tool_name`, `tool_args`, and other fields Agno needs. The retry will fail or
+produce incorrect behaviour even though the user is told they can try again.
+
+**Fix:** Peek without popping, then discard only after confirmed success:
+
+```python
+cached = _PAUSED_TOOLS.get(run_id)  # peek, do not pop
+# ... build tools_list from cached ...
+try:
+    r = await client.post(continue_url, data=continue_data)
+except httpx.RequestError as exc:
+    if cached is not None:
+        _PAUSED_TOOLS[run_id] = cached  # restore for retry
+    ...
+    return
+if r.status_code not in (200, 201) and not (
+    r.status_code == 409 and "already continued" in r.text
+):
+    if cached is not None:
+        _PAUSED_TOOLS[run_id] = cached  # restore for retry
+    _RESOLVED_RUNS.discard(run_id)
+    await send_message(client, chat_id, f"AgentOS error resuming run: {r.status_code}")
+    return
+_PAUSED_TOOLS.pop(run_id, None)  # discard only after confirmed success
+```
+
+---
+
+### WR-04: `wrapped_update_approval` emits `run_id=None` -- OBS correlation broken for resolve events
+
+**File:** `agentos/approval_recorder.py:108-117`
+
+**Issue:** `wrapped_update_approval` hardcodes `run_id=None` in the `_emit` call
+(line 109). The `update_approval` method signature does not receive `run_id`, but the DB
+result dict likely contains it. Without `run_id` in resolve-event OBS records, correlating
+`create` -> `resolve` -> `run_status` events in a log query requires joining on
+`approval_id`, which may not be indexed in all log aggregation backends.
 
 **Fix:**
 
 ```python
 run_id_from_result = (result or {}).get("run_id")
 recorder._emit(
+    op="resolve",
+    approval_id=approval_id,
     ...
     run_id=run_id_from_result,
     ...
@@ -181,56 +300,62 @@ recorder._emit(
 
 ---
 
-### WR-04: `_PAUSED_TOOLS` is not cleaned up on denial path
-
-**File:** `channels/telegram_adapter.py:157-170`
-
-**Issue:** `_PAUSED_TOOLS.pop(run_id, None)` is called regardless of `confirmed`, so the cache is cleaned on both approve and deny. However, if `_resolve_approval_row` returns `False` (lines 144-147), the function returns early after re-inserting `run_id` into `_RESOLVED_RUNS` via discard but the `_PAUSED_TOOLS` entry is never popped. The user is told "Approval update failed — please try again." but if they tap again, the code re-enters `handle_callback`, finds `run_id in _RESOLVED_RUNS` (it was added at line 139 before the failure), and drops the retry silently (line 137-138).
-
-**Fix:** The `_RESOLVED_RUNS.discard(run_id)` rollback (line 146) is correct for allowing retry, but the inconsistency between `_RESOLVED_RUNS` rollback and missing `_PAUSED_TOOLS` cleanup on `_resolve_approval_row` failure is confusing. Document explicitly that `_PAUSED_TOOLS` is intentionally left populated on this path (so the retry can use the cached tools) or add a cleanup call. Also note that this interacts with CR-02: if retry never succeeds, `_PAUSED_TOOLS` leaks the entry.
-
----
-
 ## Info
 
-### IN-01: Logger `propagate = False` may suppress structured log shipping
+### IN-01: Logger propagation is environment-sensitive -- behaviour differs between test and production
 
-**File:** `agentos/approval_recorder.py:30`
+**File:** `agentos/approval_recorder.py:26-30`
 
-**Issue:** `log.propagate = False` is set only when a new handler is added (lines 26-30). If the root logger already has handlers (as it will in production, e.g. a JSON log shipper), no handler is added and `propagate` stays `True`. The condition `if not log.handlers and not logging.getLogger().handlers` means the guard is environment-dependent. This is fragile; in a container with structlog or a JSON formatter configured on the root, `log.propagate = True` plus no local handler is correct — but a bare test environment gets a StreamHandler added and `propagate = False`, silencing the parent. The inconsistency makes log routing hard to reason about.
+**Issue:** The handler setup block at lines 26-30 adds a `StreamHandler` and sets
+`log.propagate = False` only when neither the named logger nor the root logger has
+handlers. In production (JSON shipper on root logger) the block is skipped and `propagate`
+stays `True`. In a bare test environment a `StreamHandler` is added and
+`propagate = False`, silencing the parent. Logger behaviour differs between environments
+in a way that could mask OBS gaps during development.
 
-**Fix:** Either remove the inline handler setup entirely and rely on the application's logging config, or always set `propagate = False` and explicitly add the handler unconditionally (and accept that test output goes to stderr).
+**Fix:** Remove the inline handler bootstrapping entirely and rely on the application's
+logging configuration. If an OBS log handler is required unconditionally, configure it
+in `app.py`'s startup sequence rather than inside the library module.
 
 ---
 
-### IN-02: `tool_args_summary` field included only when not `None` — schema inconsistency
+### IN-02: `tool_args_summary` conditionally absent in OBS record schema -- downstream parsers need documentation
 
 **File:** `agentos/approval_recorder.py:198-199`
 
-**Issue:** The OBS-01 log record conditionally includes `tool_args_summary` only for `create` events. `resolve` and `run_status` events omit it. While intentional (those calls don't have args), downstream log parsers that expect a fixed schema will need to handle optional presence. The pattern is inconsistent with `error_type` / `error_msg` which are also conditional but are documented as optional in the docstring.
+**Issue:** `tool_args_summary` is included in the JSON record only when not `None`
+(line 198), appearing only on `op=create` events. Log parsers expecting a fixed schema
+will silently miss the field on `resolve` and `run_status` records.
 
-**Fix:** Document in the module docstring that `tool_args_summary` is only present on `op=create` events to set parser expectations.
+**Fix:** Document in the module docstring that `tool_args_summary` is only present on
+`op=create` events. Optionally emit `"tool_args_summary": null` unconditionally for a
+consistent schema.
 
 ---
 
-### IN-03: `BOT_TOKEN` in module-level `TG_API` constant leaks token into log lines at WARNING level
+### IN-03: `BOT_TOKEN` embedded in `TG_API` constant -- future URL-logging calls would leak the token
 
 **File:** `channels/telegram_adapter.py:61`
 
-**Issue:** `TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"` is used as the base URL for all Telegram calls. Several `log.warning(...)` calls (e.g., line 199: `"Continue returned %s: %s", r.status_code, r.text[:200]`) include `r.request.url` or other request-level attributes in some httpx versions. More critically, if an `httpx.RequestError` is ever logged with the full URL (not currently — only `exc` is logged — but fragile), the bot token appears in logs. The safer pattern is to never construct URLs containing the token, or to use httpx's base_url + auth header approach.
+**Issue:** `TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"` bakes the token into a
+module-level string constant. Current log call sites log only `exc` or status codes, not
+request URLs, so the token is not currently leaked. However, any new
+`log.error(..., r.request.url)` or httpx debug-level logging would expose the full URL
+including the token in every log sink.
 
-**Fix:** Use httpx's `base_url` + token-as-path-segment only in the client, or at minimum ensure no `log.*` call ever includes request URLs:
+**Fix:** Construct the token-containing URL transiently at call sites only:
 
 ```python
-# Safer: store token separately, build URLs in helpers only
 _TG_BASE = "https://api.telegram.org"
-_TG_PATH_PREFIX = f"/bot{BOT_TOKEN}"  # never logged
+
+async def tg_get(client, method, **params):
+    resp = await client.get(f"{_TG_BASE}/bot{BOT_TOKEN}/{method}", params=params)
 ```
 
-This is a low-severity concern given the current log call sites, but worth noting before adding any new `log.error("... %s", exc)` where `exc` might carry URL context.
+This avoids storing the token in a loggable module-level constant.
 
 ---
 
-_Reviewed: 2026-05-28T13:57:00-03:00_
+_Reviewed: 2026-05-28T14:15:00-03:00_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
