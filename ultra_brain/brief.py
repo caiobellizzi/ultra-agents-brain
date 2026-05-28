@@ -6,6 +6,7 @@ Reads today's Inbox stubs → LLM synthesis → vault file + Telegram summary.
 from __future__ import annotations
 
 import os
+import urllib.parse
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -147,7 +148,11 @@ def daily_brief(
         )
         return brief_path
 
-    domains = {item["url"].split("/")[2] for item in new_items if item.get("url")}
+    domains = {
+        urllib.parse.urlsplit(item["url"]).netloc
+        for item in new_items
+        if item.get("url") and urllib.parse.urlsplit(item["url"]).netloc
+    }
     prompt = _BRIEF_TEMPLATE.format(
         date=today.isoformat(),
         item_count=len(new_items),
