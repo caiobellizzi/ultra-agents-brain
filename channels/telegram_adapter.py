@@ -542,6 +542,9 @@ async def handle_callback(
     if not _UUID_RE.match(run_id):
         log.warning("callback_data contains invalid run_id %r — ignoring", run_id)
         return
+    if not _UUID_RE.match(tool_call_id):
+        log.warning("callback_data contains invalid tool_call_id %r — ignoring", tool_call_id)
+        return
 
     # TOCTOU guard: claim the run_id BEFORE issuing the POST, not after.
     # If two callbacks race past this point both would otherwise POST the
