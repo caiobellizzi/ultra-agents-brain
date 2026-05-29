@@ -1,8 +1,8 @@
 ---
 phase: 11
 slug: memory-surface-activation
-status: verified
-verified: 2026-05-28
+status: passed
+verified: 2026-05-23
 verifier: retroactive-synthesis (plans 11-01 / 11-02 / 11-03 SUMMARY evidence)
 ---
 
