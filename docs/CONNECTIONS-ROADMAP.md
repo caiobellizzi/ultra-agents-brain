@@ -68,9 +68,9 @@ These are zero-design tasks — keys and login flows that have been sitting wait
 - **Work:** Smoke-test the existing `channels/telegram_adapter.py` flow; document in `MAINTENANCE.md`; add a Telegram-source dedup file analogous to `monitor-seen.json`.
 
 ### 3.2 AgentOS UI wiring — evaluations, memory, knowledge, approvals
-- **Gap:** Memory S603 diagnosed missing surfaces in the os.agno.com UI. The agents are instrumented (`eval_recorder`, `instrumented_memory`, `instrumented_knowledge`) but the UI doesn't render the data.
+- **Gap:** The os.agno.com UI still doesn't render the instrumented data. The backend pipeline is now fully wired: `eval_recorder` writes PERFORMANCE rows ✅, `InstrumentedMemory` logs decisions ✅, and `live_judge` scores those rows and writes experience notes back to `vault/_system/experiences/{agent_id}/` ✅ (self-evolving feedback loop is live). The remaining gap is purely on the UI side — AgentOS isn't rendering the eval scores, memory events, or knowledge traces it receives.
 - **Win:** Observability becomes visual, not just structured logs.
-- **Work:** Per S603 diagnosis — wire the existing recorder outputs into AgentOS's expected schemas.
+- **Work:** Wire the existing recorder outputs into AgentOS's expected display schemas; confirm the AGENT_AS_JUDGE rows surface in the eval tab.
 
 ### 3.3 Reproducible `_inbox/` refinement workflow
 - **Gap:** "Refinement" today is whoever-is-driving + Claude reading inbox notes. The distill_layer-2 pattern (S597, S598) exists for the external second-brain vault but isn't tied to `brain.ingest`.
@@ -101,7 +101,34 @@ Recent commits (`13-02` series, ending 26703b6) shipped read-path observability 
 
 - **Write-path Knowledge instrumentation** — InstrumentedKnowledge wraps reads; writes still go through raw Agno paths.
 - **Memory extraction events** — `InstrumentedMemoryManager` (memory 21850, 21851) logs decisions but doesn't surface them in the AgentOS UI (see 3.2).
-- **Cross-agent eval correlation** — `eval_recorder` writes per-agent rows; nothing joins them into a "supervisor team turn" view.
+- **Cross-agent eval correlation** — `eval_recorder` writes per-agent rows and `live_judge` now writes per-agent experience notes to the vault; however, nothing joins individual agent rows into a unified "supervisor team turn" view across all 5 leaf agents.
+- **Experience notes reindex** — `live_judge._write_experience_note()` calls `create_knowledge()` then `reindex()` immediately after writing each note, but `create_knowledge` does not exist in `agentos.knowledge` (only `reindex` is defined). The reindex step silently fails on every judgment, so experience notes are written to disk but are not searchable via the knowledge layer until a manual `qmd embed` run.
 - **Cost ledger per skill, not just per call** — `cost-ledger.md` is an append log. A weekly rollup by skill (not by call) would make over-spending obvious.
 
 These are the natural next-pass items for the EVAL/OBS workstream.
+
+---
+
+## 6. Post-v2.0 additions (shipped after v2.0 closed)
+
+These items landed after the v2.0 milestone was archived and are not tracked in any prior phase doc.
+
+### 6.1 Experience KB
+- **What shipped:** `live_judge._write_experience_note()` writes a structured vault note to `vault/_system/experiences/{agent_id}/` after every scored eval run. Notes include agent ID, run ID, score, rubric, pass/fail, and a brief summary of what worked or failed.
+- **Purpose:** Agents can search these notes at inference time to learn from prior runs — the core of the self-evolving feedback loop.
+- **Status:** Writing side is live. Reindex side is broken (see Section 5 — `create_knowledge` missing).
+
+### 6.2 Agentic Culture
+- **What shipped:** `enable_agentic_culture=True` enabled on all 5 leaf agents (ingest, query, research, curator, and a fifth specialist). Agents now inherit a shared cultural KB that shapes tone, priorities, and behavioral defaults across the team.
+- **Purpose:** Consistent agent personality and operational norms without duplicating instructions in every agent definition.
+- **Status:** Live in production.
+
+### 6.3 Workshop system
+- **What shipped:** `agentos/workshop_queue.py` + `agentos/workshop_registry.py` — an autonomous work queue that lets agents schedule tasks across session boundaries. The queue persists in the database; the registry maps task types to handler functions.
+- **Purpose:** Agents can enqueue deferred or cross-session work (e.g., "re-research this topic next week") without a human triggering it.
+- **Status:** Code deployed to VPS. Integration with the leaf agents is partial — queue writes work, handler dispatch not yet wired to all agent types.
+
+### 6.4 Supervisor team
+- **What shipped:** `agentos/agents/supervisor.py` — an Agno `Team` that orchestrates the 4 leaf agents (ingest, query, research, curator) under a single orchestrator model. Exposed at `/agents/supervisor` in the AgentOS API.
+- **Purpose:** Single entry point for multi-step requests that span more than one specialist (e.g., "research X and check if we already have notes on it").
+- **Status:** Live. Systemd unit `uab-brain.service` runs the main app which registers the supervisor team endpoint.

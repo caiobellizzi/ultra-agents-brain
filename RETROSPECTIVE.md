@@ -63,3 +63,34 @@
 - Nyquist validation gaps found real missing tests in phases 12–14
 - VPS env var loading order matters: `set -a; source .env; set +a` needed before
   subprocess spawns
+
+---
+
+## Post-v2.0: Self-Evolving Agents
+
+**Work window:** May 2026 (after v2.0 closed)
+
+### What shipped
+
+| Feature | Deliverable |
+|---------|------------|
+| Eval noise fixes | eval_recorder no longer records junk/Untitled rows; HITL rows excluded |
+| Live auto-scoring | uab-live-judge.service + timer fires every 2 min; judges pending eval rows via LLM |
+| Experience KB | live_judge._write_experience_note() writes judgments to vault/_system/experiences/{agent_id}/ |
+| Agentic Culture | enable_agentic_culture=True on all 5 leaf agents (chat, query, research, ingest, curator) |
+| Supervisor agent | agentos/agents/supervisor.py — Agno Team orchestrating all 5 leaf agents |
+| Workshop system | workshop_queue.py + workshop_registry.py — cross-session autonomous work queue |
+
+### Key decisions
+
+- **Experience notes in vault, not DB:** Judgment summaries written to markdown vault notes so agents can search them through the Knowledge surface without a separate vector store
+
+- **Class-level culture enabling:** `enable_agentic_culture=True` passed to `create_agent()` so culture KB is inherited at construction, not injected at runtime
+
+- **Reindex failure accepted for now:** live_judge calls `reindex()` after writing experience notes, but `create_knowledge` is not yet available in `agentos.knowledge` — the note is written successfully, the reindex is skipped with a warning (not a hard failure)
+
+### Known gaps not closed
+
+- `create_knowledge` missing from agentos.knowledge — experience notes written but not auto-reindexed into the knowledge surface
+- Supervisor agent excluded from agentic culture (`enable_agentic_culture` not supported on Agno Team objects)
+- Workshop queue not yet connected to any agent's tool surface (infrastructure ready, no agent uses it)

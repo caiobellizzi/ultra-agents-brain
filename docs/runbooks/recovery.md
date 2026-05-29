@@ -17,10 +17,15 @@ docker compose -f /opt/ultra-agents-brain/deploy/docker-compose.yml ps
 sudo tailscale up
 ```
 
-5. Restart the stack:
+5. Restart the stack and timers:
 
 ```bash
 sudo systemctl restart uab-brain.service
+sudo systemctl restart uab-telegram.service
+sudo systemctl enable --now uab-digest.timer
+sudo systemctl enable --now uab-monitor.timer
+sudo systemctl enable --now uab-review.timer
+sudo systemctl enable --now uab-live-judge.timer
 ```
 
 6. Run:
@@ -48,6 +53,8 @@ Then run:
 ```
 
 ## Restore Hermes State
+
+> **Note — Hermes in limbo:** Hermes is currently mostly eliminated from the runtime path. The directory below may not exist on active deployments. If the decision is made to fully remove Hermes, skip this section. If restoring Hermes, follow the steps below. See `docs/SOURCES.md` § "Hermes gateway" for current status.
 
 Hermes state lives under `/var/lib/ultra-agents-brain/hermes`. If restoring from snapshot is not possible, recreate the directory and let Hermes rebuild session state:
 
@@ -95,6 +102,8 @@ set +a
 If rotating `LITELLM_MASTER_KEY`, update every client that calls LiteLLM, including Hermes and local smoke scripts.
 
 ## Hermes Upgrade Process
+
+> **Note — Hermes in limbo:** Hermes is currently not active in the normal runtime path. This section applies only if the decision is made to restore Hermes. See `docs/SOURCES.md` § "Hermes gateway".
 
 Current pinned tag: `ghcr.io/nousresearch/hermes-agent:v2026.5.16`.
 

@@ -23,6 +23,8 @@ Every data source connected to the second brain — what it does, where it's con
    vault ◄─► claude-mem (cross-session memory)
 
    LLM calls ──► LiteLLM proxy ──► Anthropic / Groq / OpenAI / NVIDIA NIM / LM Studio / OpenRouter / xAI
+
+   eval feedback ──► live_judge ──────────────────────────────► vault/_system/experiences/
 ```
 
 ---
@@ -162,7 +164,7 @@ Every data source connected to the second brain — what it does, where it's con
 
 ### AgentOS HTTP API ✅
 - **App:** `agentos/app.py`
-- **Surfaces:** chat, query, research, ingest, curator, supervisor team — all with explicit IDs (memory 21840–21846)
+- **Surfaces:** chat, query, research, ingest, curator, supervisor team (`id="supervisor"`) — all with explicit IDs (memory 21840–21846)
 - **Web UI:** [os.agno.com](https://os.agno.com) (memory S598 — wiring incomplete)
 
 ---
@@ -170,9 +172,35 @@ Every data source connected to the second brain — what it does, where it's con
 ## Observability
 
 ### Eval recorder ✅
-- **Module:** `agentos/eval_recorder.py`
+- **Module:** `agentos/eval_recorder.py` — instruments `Agent.run` / `Agent.arun` / `Agent.continue_run` / `Agent.acontinue_run` and `Team` equivalents at **class level** via `patch_classes_for_recording(db)`. Class-level patching ensures Agno's `deep_copy()` path (used per HTTP request) inherits the instrumentation automatically.
+- **What it writes:** one `EvalRunRecord` per non-streaming, non-background run, with `eval_type=PERFORMANCE` and `score=null` (score is filled later by the live judge). Rows land in `ai.agno_eval_runs`.
+- **Skipped paths:** streaming (`stream=True`), background (`background=True`), and paused/HITL runs (`response.is_paused=True`) — these do not produce eval rows.
+- **Privacy gate + sampling:** `agentos/eval_live_policy.py` (`EvalLivePolicy`) is consulted at record time. Controls whether a row is tagged `judge_status=pending` (eligible for judging), based on `EVAL_LIVE_JUDGE_ENABLED`, `EVAL_LIVE_SAMPLE_RATE`, per-agent `EVAL_LIVE_SAMPLE_RATE_{AGENT}` overrides, and a regex secret-marker check. Disabled by default (`enabled=False`).
+- **Rubrics:** `agentos/eval_rubrics.py` — maps `agent_id` → rubric. Five rubrics defined:
+  | Rubric ID | Agent | Strategy | Threshold |
+  |-----------|-------|----------|-----------|
+  | `chat-helpfulness-v1` | `chat` | binary | 1.0 |
+  | `query-groundedness-v1` | `query` | numeric | 0.7 |
+  | `ingest-fidelity-v1` | `ingest` | numeric | 0.7 |
+  | `curator-quality-v1` | `curator` | numeric | 0.7 |
+  | `research-grounding-v1` | `research` | numeric | 0.7 |
 - **Pre-commit gate:** `tools/precommit_eval_router.sh`
 - **EVAL-02 hook:** `tests/conftest.py` (memory 21861, 21862)
+
+### Live judge ✅
+- **Module:** `agentos/live_judge.py` — timer-fired worker that reads `pending` performance rows, runs an LLM judge (`AgentAsJudgeEval` via `private-worker` tier), and writes `agent_as_judge` child rows back to `ai.agno_eval_runs`.
+- **Systemd unit:** `deploy/systemd/uab-live-judge.service` (oneshot) + `deploy/systemd/uab-live-judge.timer` (fires every 2 min, `OnUnitActiveSec=2min`)
+- **CLI:** `python -m agentos live-judge --once --limit 20`
+- **Flow per row:** fetch pending `PERFORMANCE` rows → privacy check → rubric lookup → `judge.evaluate()` → write child `AGENT_AS_JUDGE` row → update parent `judge_status=judged` → write experience note (see below)
+- **Failure handling:** up to `EVAL_LIVE_MAX_ATTEMPTS` (default 3) retries; rows that exceed the limit are marked `failed_max_attempts`
+
+### Experience notes ✅
+- **Path:** `vault/_system/experiences/{agent_id}/` (resolved from `SECOND_BRAIN_DIR` env var, defaulting to `vault`)
+- **Written by:** `live_judge._write_experience_note()` — called after each successful judgment (all rubrics for a run complete without error)
+- **Filename:** `{YYYY-MM-DD}-{run_id}.md`
+- **Format:** YAML frontmatter (`agent`, `run_id`, `score`, `rubric`, `status`, `date`, `tags`) followed by markdown sections: Input, Score, What worked/failed, Key pattern
+- **Purpose:** agents with `enable_agentic_culture=True` can search these notes (via `agentos/knowledge`) before answering, creating a feedback loop from past judgments into future responses
+- **Reindex:** `_write_experience_note` calls `agentos.knowledge.reindex()` immediately after writing so the note is searchable on the next agent run
 
 ### Cost ledger ✅
 - **Per-vault:** `vault/_system/cost-ledger.md` appended by every paid LLM call via `ultra_brain/cost.py`

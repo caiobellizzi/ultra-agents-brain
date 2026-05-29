@@ -18,7 +18,7 @@ This runbook documents how the Mac Obsidian client should read and edit the vaul
 - Auto-push from Mac: disabled by default.
 - Commit message for manual Mac edits: `vault: obsidian edits`.
 
-The VPS remains the normal autonomous writer. The Mac should primarily pull, read, and perform deliberate human edits.
+The VPS remains the normal autonomous writer (via AgentOS / `uab-brain.service`). The Mac should primarily pull, read, and perform deliberate human edits.
 
 ## Web Clipper
 
@@ -33,7 +33,7 @@ The VPS remains the normal autonomous writer. The Mac should primarily pull, rea
 2. Edit notes.
 3. Commit manually through Obsidian Git or the terminal.
 4. Push to the private remote.
-5. Allow the VPS to pull before the next Hermes write.
+5. Allow the VPS to pull before the next AgentOS write.
 
 ## Conflict Recovery In Obsidian
 
@@ -50,4 +50,3 @@ The VPS remains the normal autonomous writer. The Mac should primarily pull, rea
 - Use `<private>...</private>` around sensitive personal material that must remain in the note.
 - Never store API keys, tokens, passwords, recovery codes, cookies, SSH keys, or account numbers.
 - Notes marked `privacy: secret` must not be sent to remote LLM providers.
-

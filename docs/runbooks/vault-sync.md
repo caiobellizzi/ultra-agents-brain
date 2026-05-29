@@ -5,9 +5,11 @@ It does not implement deployment scripts.
 
 ## Roles
 
-- VPS: authoritative autonomous writer used by Hermes.
+- VPS: authoritative autonomous writer, driven by AgentOS (`uab-brain.service`).
 - GitHub private repository: transport and backup remote.
 - Mac: Obsidian client and occasional human editor.
+
+> **Note — Hermes status:** Hermes was previously described as the VPS-side autonomous writer but is currently in limbo — mostly eliminated from the runtime path. AgentOS (`uab-brain.service`) is the active writer. See `docs/SOURCES.md` § "Hermes gateway".
 
 ## Required Human Inputs
 
@@ -21,13 +23,13 @@ It does not implement deployment scripts.
 
 1. Create or clone the private vault repository on the VPS.
 2. Copy the scaffolded `vault/` contents into that repository root if the vault repo is separate from this project.
-3. Set Git identity for the Hermes writer.
+3. Set Git identity for the AgentOS writer.
 4. Add the private GitHub remote.
 5. Run an initial commit and push after human review.
 
-## Hermes Write Discipline
+## AgentOS Write Discipline
 
-Every Hermes skill that writes to the vault should follow this sequence:
+Every AgentOS skill that writes to the vault should follow this sequence:
 
 1. Check working tree status.
 2. Pull with rebase from the remote.
@@ -58,14 +60,14 @@ Use a systemd timer or cron only after manual sync is proven.
 
 ## Conflict Recovery
 
-1. Stop Hermes writes.
+1. Stop AgentOS vault writes.
 2. Pull the latest remote state on the VPS.
 3. Inspect conflicted files manually.
 4. Preserve both human edits and agent additions where possible.
 5. For logs and ledgers, keep both entries and order by timestamp.
 6. For note body conflicts, prefer human-authored prose unless the agent has newer cited evidence.
 7. Commit the resolved files with `vault: resolve sync conflict`.
-8. Push and restart Hermes writes.
+8. Push and resume AgentOS vault writes.
 
 ## Safety Rules
 
@@ -74,4 +76,3 @@ Use a systemd timer or cron only after manual sync is proven.
 - Do not let multiple autonomous writers push to the same branch.
 - Keep append-only files append-only.
 - Archive stale material through normal Git history, not by destructive cleanup.
-

@@ -2,7 +2,9 @@
 
 ## Purpose
 
-This runbook prepares a Hostinger Ubuntu 24.04 VPS for the ultra-agents-brain runtime: Docker Compose, LiteLLM, Hermes Agent, Telegram gateway, Tailscale, logs, and the second-brain vault checkout.
+This runbook prepares a Hostinger Ubuntu 24.04 VPS for the ultra-agents-brain runtime: Docker Compose, LiteLLM, Telegram gateway, Tailscale, logs, and the second-brain vault checkout.
+
+> **Note — Hermes status:** Hermes (the external agent gateway at port 8787) is currently in limbo — mostly eliminated from the runtime path but not fully removed. Env vars and the image pin are retained for compatibility. A decision is needed: finish removal or restore. See `docs/SOURCES.md` § "Hermes gateway".
 
 ## First Bootstrap
 
@@ -55,13 +57,27 @@ Keep `.env` out of source control.
 
 ## Services
 
-Install the systemd unit and cron file:
+Copy all systemd units to the system directory and enable them:
 
 ```bash
 sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-brain.service /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-telegram.service /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-digest.service /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-digest.timer /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-monitor.service /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-monitor.timer /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-review.service /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-review.timer /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-live-judge.service /etc/systemd/system/
+sudo cp /opt/ultra-agents-brain/deploy/systemd/uab-live-judge.timer /etc/systemd/system/
 sudo cp /opt/ultra-agents-brain/deploy/cron/ultra-agents-brain.cron /etc/cron.d/ultra-agents-brain
 sudo systemctl daemon-reload
 sudo systemctl enable --now uab-brain.service
+sudo systemctl enable --now uab-telegram.service
+sudo systemctl enable --now uab-digest.timer
+sudo systemctl enable --now uab-monitor.timer
+sudo systemctl enable --now uab-review.timer
+sudo systemctl enable --now uab-live-judge.timer
 ```
 
 Check service state:
@@ -87,7 +103,7 @@ The expected result is an `ok` line for each alias: `orchestrator`, `default-wor
 
 ## Telegram Webhook
 
-Point your reverse proxy or tunnel at the local Hermes HTTP port:
+> **Note — Hermes in limbo:** The port below (`127.0.0.1:8787`) belongs to the Hermes gateway, which is currently not active in the normal runtime path. The `uab-telegram.service` handles Telegram in its place. See the Hermes note at the top of this file.
 
 ```text
 127.0.0.1:8787

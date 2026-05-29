@@ -23,6 +23,7 @@ The CLI is `python -m ultra_brain --vault <path> <command>`. On the VPS, `$SECON
 | Bluesky poll | on demand | manual | `vault/_inbox/` | `bluesky` subcommand |
 | Research run | on demand | manual | `vault/Projects/Research/<topic>/` | `worker.research` |
 | Telos check | on demand | manual | stdout | `telos.check` |
+| Live judging | every 2 min (VPS timer) | VPS systemd | `vault/_system/experiences/` + `ai.agno_eval_runs` | `agentos/live_judge.py` |
 
 ---
 
@@ -225,7 +226,7 @@ The MCP server picks up new vectors automatically on next query.
 
 - **LiteLLM key rotation** — update keys in `.env` on VPS, restart container: `docker compose -f deploy/docker-compose.yml restart litellm`. Verify with `bash scripts/smoke-litellm.sh`.
 - **Cost ledger review** — `cat vault/_system/cost-ledger.md` or run `python -m ultra_brain --vault vault cost-summary`. Hard cap is `DAILY_COST_CAP_USD` in `.env`.
-- **Eval review** — inspect outputs from `agentos/eval_recorder.py` (Postgres `agno_knowledge` schema); see EVAL-02 notes in `.planning/`.
+- **Eval review** — query `ai.agno_eval_runs` in Postgres for recent eval rows; also check `vault/_system/experiences/` for accumulated learning notes written by the live judge.
 - **Feed curation** — prune dead URLs from `skills/worker.monitor/feeds.yaml` and `feeds.txt`; refresh `bluesky-handles.txt`.
 
 ---
@@ -246,7 +247,7 @@ bash scripts/health-check.sh                 # full health probe
 bash scripts/smoke-litellm.sh                # LiteLLM round-trip
 python scripts/smoke_agno.py                 # Agno framework smoke
 docker compose -f deploy/docker-compose.yml ps   # container status
-systemctl status uab-bot uab-postgres uab-telegram   # VPS services
+systemctl status uab-brain uab-telegram uab-digest.timer uab-monitor.timer uab-review.timer uab-live-judge.timer   # VPS services
 ```
 
 ---
@@ -281,7 +282,8 @@ systemctl status uab-bot uab-postgres uab-telegram   # VPS services
 
 1. Add to `agentos/agents/`, give it an explicit `id=` (memory 21841–21846).
 2. Decide auto-memory extraction: keep on for interactive agents, off for background agents (curator/ingest pattern).
-3. Wire into `agentos/app.py` and verify with `python scripts/smoke_agno.py`.
+3. Decide `enable_agentic_culture`: set `True` for interactive agents (chat, query, research) — all current interactive agents have it enabled. Background/worker agents do not need it.
+4. Wire into `agentos/app.py` and verify with `python scripts/smoke_agno.py`.
 
 ---
 
