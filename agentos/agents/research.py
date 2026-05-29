@@ -30,6 +30,7 @@ def make_research_agent(
         # Memory + session summaries (conversational)
         memory_manager=memory_manager,
         enable_agentic_memory=True,
+        enable_agentic_culture=True,
         update_memory_on_run=True,
         add_history_to_context=True,
         enable_session_summaries=True,

@@ -42,6 +42,7 @@ def make_chat_agent(
         # Memory
         memory_manager=memory_manager,
         enable_agentic_memory=True,
+        enable_agentic_culture=True,
         update_memory_on_run=True,
         add_history_to_context=True,
         # Session summaries

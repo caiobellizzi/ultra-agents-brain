@@ -24,6 +24,7 @@ def make_curator_agent(memory_manager: MemoryManager, db=db) -> Agent:
         # Memory
         memory_manager=memory_manager,
         enable_agentic_memory=True,
+        enable_agentic_culture=True,
         update_memory_on_run=False,  # phase 11 D-06: background/bulk agents don't auto-extract memory
         add_history_to_context=True,
         # NO session summaries — one-shot bulk agent
