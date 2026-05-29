@@ -60,12 +60,72 @@
 
 ---
 
-## Cross-Milestone Trends
+## Milestone: v2.0 — AgentOS Surface Activation
 
-*Will be updated after v2.0.*
+**Shipped:** 2026-05-28
+**Phases:** 6 (10–15) | **Plans:** 18 | **Commits:** ~50 | **Duration:** 6 days
+
+### What Was Built
+
+- Phase 10 — Read-only diagnostic audit: all 4 write paths traced; `db_id="ultra-brain-main"` shared workspace decision
+- Phase 11 — Memory surface: `InstrumentedMemoryManager`; both auto-extraction and agentic-tool paths emit OBS-01 lines; 74 VPS rows
+- Phase 12 — Evals surface: `InstrumentedEvalRecorder.wrap()` on all 6 agents; `performance`/`accuracy` row semantics corrected; 155 VPS rows
+- Phase 13 — Knowledge surface: vault 3,291 pgvector rows; `InstrumentedKnowledge` wrapping; idempotent sha256-skip reindex
+- Phase 14 — Approvals surface: `@approval` stacking bug root-caused and fixed; `ApprovalRecorder`; Telegram resolve bridge; 4 VPS rows
+- Phase 15 — worker.monitor polish: daily-brief lookback fix; vault sync `--delete` safety; `check_surfaces.py` psycopg3; retrospective
+
+### What Worked
+
+- **Diagnose first (Phase 10)** — the full read-only audit before writing a single line of code paid off immediately. The `db_id` decision in `DB-ID-DECISION.md` unblocked every subsequent phase without re-investigation.
+- **Instrumentation pattern** — wrapping Agno internals without forking proved sustainable. Zero regressions on 48-case eval suite throughout all 6 phases.
+- **GSD milestone audit before close** — caught 4 gaps (missing VERIFICATION.md for phases 10/11, psycopg2 bug, stale REQUIREMENTS.md checkboxes) that would have been invisible at tag time. Fixed in <2h.
+- **TDD on approval + monitor fixes** — regression tests written before implementation on Phase 14 and 15 fixes. Zero re-debug cycles post-merge.
+- **OBS-01 structured logging** — consistent schema across all 4 surfaces made Phase 15 smoke verification trivial.
+
+### What Was Inefficient
+
+- **Phases 10 and 11 had no VERIFICATION.md** — retroactive docs were needed at audit time. Discipline should be enforced at phase close, not milestone close.
+- **REQUIREMENTS.md not maintained during phases** — 10 checkboxes were stale at audit time.
+- **v2.5/v2.6 phases shipped before v2.0 was formally closed** — created milestone boundary confusion and forced retroactive scoping decisions.
+- **check_surfaces.py psycopg2 bug** — import error undetected because the script was never run locally against a live DB. A simple `python -c "import psycopg2"` in CI would catch this.
+
+### Patterns Established
+
+- **Instrumented wrapper pattern** — `Instrumented*` classes wrap Agno internals and emit OBS-01 structured log lines (MemoryManager, knowledge search, eval recorder, approval recorder).
+- **`db_id="ultra-brain-main"` invariant** — all agents pin to the same PostgresDb workspace; should become an env-var constant.
+- **`make check-surfaces` smoke baseline** — runnable sanity check for all 4 surfaces; candidate for CI pre-deploy gate.
+- **Retroactive VERIFICATION.md** — interactive phases can be verified retroactively from SUMMARY.md evidence; same format, written after execution.
+
+### Key Lessons
+
+1. **Write VERIFICATION.md during execution, not after** — even for read-only diagnostic phases.
+2. **Propagate requirement checkboxes at each phase close** — mark `[x]` in REQUIREMENTS.md when a plan ships.
+3. **Close milestones before starting the next one** — milestone boundary discipline prevents retroactive scoping confusion.
+4. **Test imports against your actual dep graph** — `psycopg2` vs `psycopg3` catchable by any CI import check.
+5. **The `@approval` stacking bug is non-obvious** — document Agno interaction constraints; don't stack `@approval` with `requires_confirmation=True`.
+
+### Cost Observations
+
+- Model mix: Sonnet 4.6 for coding sessions; Haiku 4.5 for claude-mem summaries; local LM Studio for agent inference
+- GSD audit + milestone close: ~2h to fix 4 gaps found by audit
+- Notable: retroactive VERIFICATION.md + requirement checkbox propagation added ~30 min but gave a clean audit pass
+
+---
+
+## Cross-Milestone Trends
 
 ### Process Evolution
 
 | Milestone | Key Process Change |
 |-----------|------------------|
-| v1.0 | First use of GSD retroactive Nyquist validation; established channels-as-adapters pattern |
+| v1.0 | First use of GSD retroactive Nyquist validation; channels-as-adapters pattern |
+| v1.5 | 9-phase 4-wave structure for large migrations; eval pre-commit router established |
+| v2.0 | Diagnose-first pattern; instrumented wrapper pattern; GSD audit caught all 4 gaps |
+
+### Recurring Issues
+
+| Issue | v1.0 | v1.5 | v2.0 | Resolution |
+|-------|------|------|------|------------|
+| Missing verification docs | ✗ | ✗ | ✗ | Enforce at phase close, not milestone audit |
+| Stale requirement checkboxes | n/a | n/a | ✗ | Add checkpoint to phase transition flow |
+| Milestone boundary drift | n/a | n/a | ✗ | Close milestones before starting next |

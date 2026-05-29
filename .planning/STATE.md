@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: AgentOS Surface Activation
-current_phase: 15
-status: executing
+current_phase: complete
+status: complete
 last_updated: "2026-05-28T19:14:24.343Z"
-last_activity: 2026-05-28 -- Phase 15 execution started
+last_activity: 2026-05-28 -- v2.0 milestone closed
 progress:
   total_phases: 7
   completed_phases: 7
@@ -77,3 +77,12 @@ Phase: 15 (worker-monitor-polish-final-verification) — EXECUTING
 Plan: 1 of 3
 Status: Executing Phase 15
 Last activity: 2026-05-28 -- Phase 15 execution started
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-05-28:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 15 `15-VERIFICATION.md` | `human_needed` — VPS smoke run required human SSH; operator confirmed all 4 surfaces populated during UAT. Milestone audit scored passed. |
+| verification_gap | Phase 16 `16-VERIFICATION.md` | `human_needed` — Phase 16 belongs to v2.5 milestone (out of v2.0 scope). |

@@ -35,3 +35,22 @@ Archive: [milestones/v1.5-ROADMAP.md](milestones/v1.5-ROADMAP.md) · [v1.5-MILES
 **Tech debt forward:** pre-commit install + real-baseline regeneration (Phase 07), CostLedger verification after 1 week of use, missing VERIFICATION.md on phases 1, 2, 8, 9 (docs only — features verified inline).
 
 ---
+
+## v2.0 — AgentOS Surface Activation (Shipped 2026-05-28)
+
+**Scope:** 6 phases (10–15), 18 plans, ~50 commits, 281 files changed, +32,809 / −4,092 LOC. Built in 6 days (2026-05-22 → 2026-05-28).
+
+**Key accomplishments:**
+
+- All 4 AgentOS surfaces populated with live data: memory (74 rows), evals (155), knowledge (3,291), approvals (4)
+- `db_id="ultra-brain-main"` shared workspace model adopted across all 5 agents — single Postgres workspace for os.agno.com
+- `InstrumentedMemoryManager`, `InstrumentedEvalRecorder`, `InstrumentedKnowledge`, `ApprovalRecorder` — OBS-01 structured logging on all 9 write events
+- `@approval` root cause found and fixed: stacked decorator bug was blocking all approval rows
+- Daily-brief date-mismatch bug fixed (regression test); vault sync `--delete` safety fixed (regression test)
+- `make check-surfaces` smoke tool written (psycopg3 migration applied)
+
+**Known deferred items at close:** 2 (see STATE.md Deferred Items — Phase 15 VPS-only verification already confirmed by human; Phase 16 is v2.5 scope)
+
+Archive: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) · [milestones/v2.0-REQUIREMENTS.md](milestones/v2.0-REQUIREMENTS.md) · [milestones/v2.0-MILESTONE-AUDIT.md](milestones/v2.0-MILESTONE-AUDIT.md)
+
+---

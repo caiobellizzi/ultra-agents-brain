@@ -1,6 +1,6 @@
 # ultra-agents-brain
 
-**Status:** Active — v2.0 in planning (v1.5 shipped 2026-05-22)
+**Status:** Active — v2.0 shipped 2026-05-28 (planning v2.1)
 **Created:** 2026-05-19
 
 ## What it is
@@ -61,22 +61,26 @@ Vault (/srv/second-brain, Markdown) ←→ AgentOS (FastAPI, Agno, :7000)
 - ✓ 4 STRIDE security mitigations applied (allowlist, callback_data, uabrain user, no hardcoded key) — v1.0
 - ✓ 38-test automated suite green; Nyquist compliant — v1.0
 - ✓ Evals surface writes corrected AgentOS rows: live `performance` parents, suite `accuracy` rows, optional child `agent_as_judge` rows — Phase 12
+- ✓ Memory surface — `InstrumentedMemoryManager` wired; os.agno.com Memory tab shows 74 rows — v2.0 Phase 11
+- ✓ Knowledge surface — vault 3,291 pgvector rows; `InstrumentedKnowledge` wrapping RAG hits — v2.0 Phase 13
+- ✓ Approvals surface — `ApprovalRecorder` wired; HITL events appear in AgentOS approvals UI — v2.0 Phase 14
+- ✓ db_id architecture — shared `db_id="ultra-brain-main"` for all 5 agents; single workspace model — v2.0 Phase 10
+- ✓ Observability — OBS-01 structured logging on all 9 write events across 4 surfaces — v2.0 Phases 11–14
+- ✓ worker.monitor polish — daily-brief date mismatch fixed; vault sync `--delete` safety fixed — v2.0 Phase 15
+- ✓ `make check-surfaces` smoke tool — psycopg3, all 4 surfaces verified non-zero — v2.0 Phase 15
+- ✓ Brain Vault Overhaul — TELOS filled, inbox sweep, operating manual, SPEC.md generator, 4 automation loops — v2.5 Phase 16
+- ✓ Multi-repo brain pipelines — nightly LLM prose summaries via GitHub Actions → `repos/*.md` → vault — v2.6 Phase 17
+- ✓ Auto-sync second-brain → VPS — SSH deploy key, git-sync.sh, reindex-vault.sh triggered on `.md` changes — v2.6 Phase 18
 
-### Active (v2.0 — AgentOS Surface Activation)
+### Active (v2.1 — Channels)
 
-- [ ] Memory surface — agent runs trigger memory extraction; os.agno.com Memory tab shows real entries
-- [ ] Knowledge surface — vault ingest populates knowledge table; agentic RAG hits visible in UI
-- [ ] Approvals surface — HITL approval events surface in AgentOS approvals UI (not just Telegram)
-- [ ] db_id architecture decision — investigate whether Agno expects per-agent db_ids; isolate vs. shared
-- [ ] Observability — structured logging on each write path (memory, eval, knowledge, approval)
-- [ ] worker.monitor polish — fix daily-brief date mismatch; v1.5 data-pipeline tech debt cleanup
+- [ ] Discord adapter using `channels/` pattern
+- [ ] WhatsApp adapter using `channels/` pattern
+- [ ] Webhook mode for Telegram (replace long-poll)
+- [ ] Vault GitHub remote bidirectional sync (Mac ↔ VPS via Obsidian-Git + cron)
 
 ### Deferred to v2.1+
 
-- [ ] Discord adapter using channels/ pattern
-- [ ] WhatsApp adapter using channels/ pattern
-- [ ] Webhook mode for Telegram (replace long-poll)
-- [ ] Vault GitHub remote for bidirectional sync (Mac ↔ VPS via Obsidian-Git + cron)
 - [ ] X/Twitter + LinkedIn ingestion in worker.monitor
 
 ### Out of Scope
@@ -98,32 +102,28 @@ Vault (/srv/second-brain, Markdown) ←→ AgentOS (FastAPI, Agno, :7000)
 | Pin agno at exact version (2.6.7) | ✓ Good | API drift would be invisible without pinning |
 | ultra-workshop deferred 2–4 weeks | — Pending | Validate Brain in daily use before building Workshop |
 | Hermes Docker image was hallucinated | ✓ Resolved | Replaced with native Python + Agno from the start |
+| `db_id="ultra-brain-main"` shared by all 5 agents | ✓ Good | Simpler than per-agent isolation for a single-owner system; os.agno.com workspace model works correctly |
+| Post-run wrapper for eval recording (no subclass) | ✓ Good | Avoids Agno internal coupling; `InstrumentedEvalRecorder.wrap(agent)` pattern is portable |
+| `performance` vs `accuracy` eval row semantics | ✓ Good | Live telemetry rows are `performance` parents; suite rows are `accuracy`; optional child `agent_as_judge` rows |
+| Stacked `@approval + @tool(requires_confirmation=True)` was root cause | ✓ Resolved | Single `@approval` on `ingest_to_vault` is the fix; double-decoration blocks the approval event |
+| psycopg3 for check_surfaces.py | ✓ Good | Project uses psycopg[binary]>=3.2; psycopg2 was never a transitive dep |
 
-## Current State (post-v1.5)
+## Current State (post-v2.0)
 
-**Shipped v1.5 (2026-05-22):** 9 phases, 15 plans, 51 commits over 3 days. 128 files, +6,093 / −950 LOC.
-All 5 agents now run on Agno 2.6.7 production-grade config: Postgres+pgvector, semantic memory, agentic RAG, ReasoningTools, Pydantic-typed outputs, MCP+A2A, 5-tier LiteLLM routing with NVIDIA NIM. 48-case eval suite green with pre-commit router.
+**Shipped v2.0 (2026-05-28):** 6 phases (10–15), 18 plans, ~50 commits in 6 days. 281 files changed, +32,809 / −4,092 LOC.
+All 4 AgentOS surfaces now populated with live data: memory 74 rows, evals 155 rows, knowledge 3,291 rows, approvals 4 rows. `db_id="ultra-brain-main"` shared workspace model. OBS-01 structured logging on all 9 write events. `make check-surfaces` smoke tool.
 
-**Tech debt forward:** pre-commit install + real baseline regeneration (Phase 07), CostLedger verification after 1 week of use, VERIFICATION.md backfill for phases 1/2/8/9 (docs only).
+**Also shipped ahead of milestone schedule:**
+- v2.5 Brain Vault Overhaul (Phase 16, 2026-05-26): TELOS filled, inbox sweep, operating manual, SPEC.md generator, 4 automation loops
+- v2.6 Brain Knowledge Pipelines (Phases 17–18, 2026-05-27): nightly LLM prose summaries via GitHub Actions, auto-sync second-brain → VPS, git-sync.sh + pgvector reindex on `.md` changes
 
-**Phase 12 complete (2026-05-24):** eval row semantics corrected after live verification. New live agent rows are `performance` telemetry parents, suite rows remain deterministic `accuracy` rows, and optional live judgments are child `agent_as_judge` rows. Historical `Untitled Evaluation` rows are intentionally not migrated.
+**Tech debt forward:** eval row model_id/model_provider null; only test_curator.py wired to suite; vault reindex is manual CLI; check_surfaces.py VPS-only (SSH required); MEM-03 enable_user_memories never set (agentic path active).
 
-## Current Milestone: v2.0 AgentOS Surface Activation
+## Next Milestone: v2.1 — Channels
 
-**Goal:** Make the AgentOS UI (os.agno.com) show real data on all 4 feature surfaces — evals, memory, knowledge, approvals — by fixing the upstream write pipelines and resolving the shared-db_id question.
+**Goal:** Expand the channel surface — Discord adapter, WhatsApp adapter, Telegram webhook mode, vault GitHub remote bidirectional sync.
 
-**Target features:**
-- Diagnostic spike — trace every write path end-to-end (memory.add, eval.record, knowledge.ingest, approval.create)
-- db_id architecture decision — per-agent isolation vs. shared workspace, based on Agno expectations
-- Memory + Evals + Knowledge + Approvals surfaces all populate with real data after agent runs
-- Observability — structured logging on each write path so future silent failures are detectable
-- worker.monitor polish — daily-brief date mismatch + v1.5 data-pipeline tech debt cleanup
-
-**Scope:** 1-week deep dive. Fixes + worker.monitor polish only — no new ingestion sources (X/Twitter, LinkedIn deferred to v2.1).
-
-**Channels (Discord/WhatsApp/webhook) and vault GitHub sync:** deferred to v2.1.
-
-**v3.0 — ultra-workshop** (separate repo, gated): begins after 2–4 weeks of v1.5+v2.0 production operation.
+**Gating:** Begin after 2–4 weeks of v2.0 production observation to validate Brain stability before adding complexity.
 
 ## Evolution
 
@@ -151,6 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-**Phase 16 complete (2026-05-26):** Brain Vault Overhaul — TELOS filled, inbox sweep operational (write_bytes+unlink iCloud fix), operating manual written, SPEC.md generator functional, all 4 automation loops wired (daily triage, weekly review HITL, monthly TELOS recheck, workshop registry vault mirror). 3 human UAT items tracked in 16-HUMAN-UAT.md. Phase 16 is the last phase of v2.0 milestone.
-
-*Last updated: 2026-05-26 — Phase 16 Brain Vault Overhaul complete*
+*Last updated: 2026-05-28 after v2.0 milestone close*
