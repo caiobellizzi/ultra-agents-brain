@@ -32,11 +32,20 @@ def check_surfaces() -> int:
         return 1
 
     try:
-        import psycopg2
-        import psycopg2.sql
+        import psycopg
+        import psycopg.sql
+        import psycopg.errors
     except ImportError as exc:
-        print(f"[error] cannot import psycopg2: {exc}", file=sys.stderr)
+        print(f"[error] cannot import psycopg: {exc}", file=sys.stderr)
         return 1
+
+    def _normalize_dsn(dsn: str) -> str:
+        """Strip SQLAlchemy dialect prefix: postgresql+psycopg:// → postgresql://"""
+        if "://" in dsn and "+" in dsn.split("://")[0]:
+            scheme, rest = dsn.split("://", 1)
+            scheme = scheme.split("+")[0]
+            return f"{scheme}://{rest}"
+        return dsn
 
     db = PostgresDb(
         id="ultra-brain-main",
@@ -49,9 +58,13 @@ def check_surfaces() -> int:
     def count_table(conn_str: str, table_name: str, label: str) -> None:
         nonlocal failures
         try:
-            conn = psycopg2.connect(conn_str)
+            conn = psycopg.connect(_normalize_dsn(conn_str))
             cur = conn.cursor()
-            cur.execute(psycopg2.sql.SQL("SELECT COUNT(*) FROM {}").format(psycopg2.sql.Identifier(table_name)))
+            cur.execute(
+                psycopg.sql.SQL("SELECT COUNT(*) FROM ai.{}").format(
+                    psycopg.sql.Identifier(table_name)
+                )
+            )
             row = cur.fetchone()
             count = row[0] if row else 0
             cur.close()
@@ -60,7 +73,7 @@ def check_surfaces() -> int:
             if count == 0:
                 failures += 1
             print(f"{label:<10} {status}  {count} rows   ({table_name})")
-        except psycopg2.errors.UndefinedTable:
+        except psycopg.errors.UndefinedTable:
             print(f"{label:<10} ✗  TABLE MISSING   ({table_name})")
             failures += 1
         except Exception as exc:  # noqa: BLE001
