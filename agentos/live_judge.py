@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import logging
+import os
 import time
 from dataclasses import dataclass
 from typing import Any, Iterable
@@ -102,6 +104,7 @@ def run_live_judge_once(
             continue
 
         parent_judged = False
+        completed_decisions: list[tuple] = []  # (rubric, decision) pairs
         for rubric in rubrics:
             if rubric.requires_content_read and not policy.can_read_full_content(parent.agent_id):
                 if not rubric.metadata_only_supported:
@@ -112,6 +115,7 @@ def run_live_judge_once(
                 decision = judge.evaluate(rubric=rubric, judge_input=judge_input)
                 child = _build_child_eval(parent, rubric=rubric, judge=judge, decision=decision, judge_input=judge_input)
                 db.create_eval_run(child)
+                completed_decisions.append((rubric, decision))
                 parent_judged = True
                 judged += 1
             except Exception as exc:
@@ -128,6 +132,11 @@ def run_live_judge_once(
 
         if parent_judged:
             _update_parent_judge_status(db, parent, "judged")
+            vault_path = os.environ.get("SECOND_BRAIN_DIR", "vault")
+            try:
+                _write_experience_note(parent, decisions=completed_decisions, vault_path=vault_path)
+            except Exception as exc:
+                logging.getLogger("agentos.live_judge").warning("experience note write failed: %s", exc)
 
     return LiveJudgeRunResult(scanned=scanned, judged=judged, skipped=skipped, failed=failed)
 
@@ -259,6 +268,77 @@ def _stringify(value: Any) -> str:
         return json.dumps(value, sort_keys=True, default=str)
     except TypeError:
         return str(value)
+
+
+def _write_experience_note(
+    parent: EvalRunRecord,
+    *,
+    decisions: list[tuple[EvalRubric, JudgeDecision]],
+    vault_path: str = "vault",
+) -> None:
+    """Write a structured experience note to vault/_system/experiences/{agent_id}/."""
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    if not decisions:
+        return
+
+    agent_id = parent.agent_id or "unknown"
+    run_id = (parent.run_id or "").replace(":", "-").replace("/", "-")[:64]
+
+    # Use best score across rubrics
+    scores = [d.score for _, d in decisions if d.score is not None]
+    score = round(sum(scores) / len(scores), 3) if scores else None
+    passed = all(d.passed for _, d in decisions)
+    status = "success" if passed else "failure"
+
+    rubric_id = decisions[0][0].rubric_id if decisions else "unknown"
+    reason = decisions[0][1].reason if decisions else ""
+
+    eval_data = parent.eval_data or {}
+    eval_input = parent.eval_input or {}
+    input_summary = str(eval_input.get("user_message") or eval_input)[:500]
+    output_summary = str(eval_data.get("output") or "")[:500]
+
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    frontmatter = f"""---
+agent: {agent_id}
+run_id: {run_id}
+score: {score}
+rubric: {rubric_id}
+status: {status}
+date: {date_str}
+tags: [experience, {agent_id}]
+---"""
+
+    body = f"""
+## Input
+{input_summary}
+
+## Score
+{score} — {"passed ✓" if passed else "failed ✗"}
+
+## What {"worked" if passed else "failed"}
+{reason}
+
+## Key pattern
+{reason}
+"""
+
+    exp_dir = Path(vault_path) / "_system" / "experiences" / agent_id
+    exp_dir.mkdir(parents=True, exist_ok=True)
+    note_path = exp_dir / f"{date_str}-{run_id}.md"
+    note_path.write_text(frontmatter + "\n" + body, encoding="utf-8")
+
+    # Reindex immediately so the experience is searchable on the next agent run
+    try:
+        from agentos.knowledge import create_knowledge, reindex
+        knowledge = create_knowledge()
+        if knowledge is not None:
+            reindex(vault_path=Path(vault_path), knowledge=knowledge)
+    except Exception as exc:
+        logging.getLogger("agentos.live_judge").warning("experience reindex failed: %s", exc)
 
 
 def live_judge_cli(args: argparse.Namespace) -> int:
