@@ -1,0 +1,11 @@
+[Unit]
+Description=ultra-agents-brain live eval judge timer (every 2 min)
+Requires=uab-brain.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

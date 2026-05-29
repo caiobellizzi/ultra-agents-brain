@@ -1,0 +1,14 @@
+[Unit]
+Description=ultra-agents-brain live eval judge (oneshot)
+After=uab-brain.service
+
+[Service]
+Type=oneshot
+User=uabrain
+WorkingDirectory=/opt/ultra-agents-brain
+EnvironmentFile=/opt/ultra-agents-brain/.env
+ReadWritePaths=/srv/second-brain /var/log/ultra-agents-brain /var/lib/uab
+ExecStart=/opt/ultra-agents-brain/.venv/bin/python -m agentos live-judge --once --limit 20
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uab-live-judge

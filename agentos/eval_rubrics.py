@@ -52,6 +52,31 @@ LIVE_RUBRICS: tuple[EvalRubric, ...] = (
         requires_content_read=True,
         metadata_only_supported=True,
     ),
+    EvalRubric(
+        rubric_id="curator-quality-v1",
+        agent_id="curator",
+        criteria=(
+            "The curated note adds value, has correct tags, and links to existing "
+            "notes when relevant. The note is properly formatted and does not duplicate "
+            "existing vault content."
+        ),
+        scoring_strategy="numeric",
+        threshold=0.7,
+        requires_content_read=False,
+        metadata_only_supported=True,
+    ),
+    EvalRubric(
+        rubric_id="research-grounding-v1",
+        agent_id="research",
+        criteria=(
+            "The report cites its sources, conclusions are traceable to the evidence, "
+            "and nothing is fabricated. Key claims are grounded in the retrieved context."
+        ),
+        scoring_strategy="numeric",
+        threshold=0.7,
+        requires_content_read=True,
+        metadata_only_supported=True,
+    ),
 )
 
 

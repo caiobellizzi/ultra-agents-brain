@@ -110,12 +110,13 @@ class InstrumentedEvalRecorder:
             "score": None,
         }
         eval_input = self._extract_input(args, kwargs)
-        self._add_live_judge_metadata(
-            eval_data=eval_data,
-            eval_input=eval_input,
-            agent_id=agent_id,
-            run_id=run_id,
-        )
+        if error is None:
+            self._add_live_judge_metadata(
+                eval_data=eval_data,
+                eval_input=eval_input,
+                agent_id=agent_id,
+                run_id=run_id,
+            )
         return EvalRunRecord(
             run_id=run_id,
             eval_type=EvalType.PERFORMANCE,
@@ -133,7 +134,7 @@ class InstrumentedEvalRecorder:
         if model is None:
             return None, None
         if isinstance(model, str):
-            return model, None
+            return model, getattr(response, "model_provider", None)
         return getattr(model, "id", None), getattr(model, "provider", None)
 
     def _extract_input(self, args, kwargs) -> dict:
@@ -217,6 +218,8 @@ def patch_classes_for_recording(db: Any) -> None:
                 except Exception as exc:
                     recorder._record(None, args, kwargs, getattr(self, "id", None), started, exc)
                     raise
+                if response is not None and getattr(response, "is_paused", False):
+                    return response  # paused; completion recorded via acontinue_run
                 recorder._record(response, args, kwargs, getattr(self, "id", None), started, None)
                 return response
 
@@ -242,6 +245,8 @@ def patch_classes_for_recording(db: Any) -> None:
                             exc,
                         )
                         raise
+                    if response is not None and getattr(response, "is_paused", False):
+                        return response  # paused; completion recorded via acontinue_run
                     await asyncio.to_thread(
                         recorder._record,
                         response,
@@ -257,7 +262,51 @@ def patch_classes_for_recording(db: Any) -> None:
 
             return patched_arun
 
+        def make_continue_run(orig):
+            def patched_continue_run(self, *args, **kwargs):
+                if kwargs.get("stream", False) or kwargs.get("background", False):
+                    return orig(self, *args, **kwargs)
+                started = time.monotonic()
+                try:
+                    response = orig(self, *args, **kwargs)
+                except Exception as exc:
+                    recorder._record(None, args, kwargs, getattr(self, "id", None), started, exc)
+                    raise
+                if response is not None and getattr(response, "is_paused", False):
+                    return response
+                recorder._record(response, args, kwargs, getattr(self, "id", None), started, None)
+                return response
+            return patched_continue_run
+
+        def make_acontinue_run(orig):
+            def patched_acontinue_run(self, *args, **kwargs):
+                if kwargs.get("stream", False) or kwargs.get("background", False):
+                    return orig(self, *args, **kwargs)
+                async def _wrapped():
+                    started = time.monotonic()
+                    try:
+                        response = await orig(self, *args, **kwargs)
+                    except Exception as exc:
+                        await asyncio.to_thread(
+                            recorder._record,
+                            None, args, kwargs, getattr(self, "id", None), started, exc,
+                        )
+                        raise
+                    if response is not None and getattr(response, "is_paused", False):
+                        return response
+                    await asyncio.to_thread(
+                        recorder._record,
+                        response, args, kwargs, getattr(self, "id", None), started, None,
+                    )
+                    return response
+                return _wrapped()
+            return patched_acontinue_run
+
         cls.run = make_run(original_run)
         cls.arun = make_arun(original_arun)
         cls._eval_recorder_patched = True
         cls._eval_recorder = recorder
+        if hasattr(cls, "continue_run"):
+            cls.continue_run = make_continue_run(cls.continue_run)
+        if hasattr(cls, "acontinue_run"):
+            cls.acontinue_run = make_acontinue_run(cls.acontinue_run)
