@@ -13,23 +13,35 @@ Copy `.env.example` to `.env` and fill in the required secrets before running an
 cp .env.example .env
 ```
 
-### LiteLLM Proxy
+### Core / AgentOS server
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `LITELLM_MASTER_KEY` | **Required** | — | Auth key for all requests to the LiteLLM proxy. Startup fails if absent. |
+| `AGENTOS_HOST` | Optional | `127.0.0.1` | Bind address for the AgentOS FastAPI server. |
+| `AGENTOS_PORT` | Optional | `7001` | Port for the AgentOS FastAPI server. Default `7001` avoids macOS Control Center which occupies 7000; safe to set to `7000` on Linux/VPS (the `uab-brain.service` systemd unit hardcodes `7000` for production). |
+| `AGENTOS_BASE_URL` | Optional | `http://127.0.0.1:7000` | Base URL used by the Telegram adapter service to reach AgentOS. Set in `uab-telegram.service`. |
+
+### Database / persistence
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `UAB_DB_PATH` | Optional | `~/Documents/uab-state/agno.db` | SQLite database path for Agno agent session memory. Always-on; used as fallback when `POSTGRES_DSN_SESSIONS` is not set. |
+| `POSTGRES_DSN_SESSIONS` | Optional | — | When set, activates `PostgresDb(id="ultra-brain-main")` for the chat session schema (`agno_sessions`) and the eval runs table (`ai.agno_eval_runs`). Required in production. Format: `postgresql+psycopg://uab:<password>@127.0.0.1:5432/agno_sessions`. |
+| `POSTGRES_DSN_KNOWLEDGE` | Optional | — | DSN for the pgvector knowledge schema (`agno_knowledge`). Required for vault RAG on the VPS. Format: `postgresql+psycopg://uab:<password>@127.0.0.1:5432/agno_knowledge`. |
+| `SECOND_BRAIN_DIR` | Optional | `/srv/second-brain` | Vault path (production convention). The CLI's `--vault` flag overrides this; on local Mac the `vault/` symlink in the project root handles it. Also used by `live_judge.py` as the base path for writing experience notes to `<SECOND_BRAIN_DIR>/_system/experiences/<agent_id>/`. |
+| `COST_LEDGER` | Optional | `/srv/second-brain/_system/cost-ledger.md` | Markdown file where cost accounting is appended. |
+| `UAB_LOG_DIR` | Optional | `/var/log/ultra-agents-brain` | Log directory used by systemd service units. |
+| `UAB_PROJECT_ROOT` | Optional | `/opt/ultra-agents-brain` | Root directory used in deploy scripts and systemd units. |
+| `UAB_SERVICE_USER` | Optional | `uabrain` | System user that owns the deployed service processes. |
+
+### LiteLLM proxy
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `LITELLM_MASTER_KEY` | **Required** | — | Auth key for all requests to the LiteLLM proxy. Startup fails if absent (`KeyError` in `agentos/model.py`). |
 | `LITELLM_BASE_URL` | Optional | `http://127.0.0.1:4000/v1` | Base URL of the LiteLLM proxy (OpenAI-compatible). |
 | `LITELLM_IMAGE` | Optional | `ghcr.io/berriai/litellm:main-stable` | Docker image used for the proxy container. Pinned to a tag that includes the fix for LiteLLM #23970 (preserves `nvidia_nim/` prefix on slashed model IDs). |
 | `LITELLM_PORT` | Optional | `4000` | Host port the LiteLLM container exposes. |
-
-### LM Studio (local model server)
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `LM_STUDIO_API_BASE` | Optional | `http://localhost:1234/v1` | LM Studio OpenAI-compatible endpoint. Use the LM Link URL when accessing from a VPS. |
-| `LM_STUDIO_API_KEY` | Optional | `lm-studio` | API key sent to LM Studio (any non-empty string is accepted). |
-| `LM_STUDIO_MODEL` | Optional | `lm-studio-primary` | Model identifier (as shown in LM Studio, e.g. `qwen3-32b-mlx`). Maps to the `orchestrator` / `default-worker` tiers. |
-| `LM_STUDIO_FAST_MODEL` | Optional | `lm-studio-fast` | Lighter model for the `cheap-worker` tier. Falls back to `LM_STUDIO_MODEL` if not set. |
 
 ### LiteLLM tier aliases (per-agent overrides)
 
@@ -43,6 +55,15 @@ Each agent reads a tier-alias env var; defaults match the tier name in `deploy/l
 | `LITELLM_CHEAP_MODEL` | `cheap-worker` | fast/low-cost tasks |
 | `LITELLM_PRIVATE_MODEL` | `private-worker` | local-only sensitive tasks |
 
+### LM Studio (local model server)
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `LM_STUDIO_API_BASE` | Optional | `http://localhost:1234/v1` | LM Studio OpenAI-compatible endpoint. Use the LM Link URL when accessing from a VPS. |
+| `LM_STUDIO_API_KEY` | Optional | `lm-studio` | API key sent to LM Studio (any non-empty string is accepted). |
+| `LM_STUDIO_MODEL` | Optional | `lm-studio-primary` | Model identifier (as shown in LM Studio, e.g. `qwen3-32b-mlx`). Maps to the `orchestrator` / `default-worker` tiers. |
+| `LM_STUDIO_FAST_MODEL` | Optional | `lm-studio-fast` | Lighter model for the `cheap-worker` tier. Falls back to `LM_STUDIO_MODEL` if not set. |
+
 ### Cloud LLM fallbacks
 
 | Variable | Required | Default | Description |
@@ -54,25 +75,20 @@ Each agent reads a tier-alias env var; defaults match the tier name in `deploy/l
 | `NVIDIA_NIM_API_KEY` | Optional | — | NVIDIA NIM (build.nvidia.com) — free tier 40 RPM/model. **Required** by orchestrator, research-worker, and default-worker NIM fallback aliases. |
 | `XAI_API_KEY` | Optional | — | xAI Grok (api.x.ai). Placeholder — purchase credits at console.x.ai before adding `xai/grok-*` aliases to `deploy/litellm/config.yaml`. |
 
-### AgentOS server
+### Eval system
+
+These variables control the live judge worker (`agentos/live_judge.py`) and the recorder policy (`agentos/eval_live_policy.py`). All default to disabled/zero so the production request path is never slowed by judging.
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `AGENTOS_HOST` | Optional | `127.0.0.1` | Bind address for the AgentOS FastAPI server. |
-| `AGENTOS_PORT` | Optional | `7001` | Port for the AgentOS FastAPI server. Default `7001` to avoid macOS Control Center which occupies 7000; safe to set to `7000` on Linux/VPS. |
+| `EVAL_LIVE_JUDGE_ENABLED` | Optional | `false` | Set to `true` on the VPS to enable automatic scoring of recorded performance rows. When `false`, the recorder marks rows but `live_judge` never runs. |
+| `EVAL_LIVE_SAMPLE_RATE` | Optional | `0.0` | Fraction of eligible runs to judge (0.0–1.0). `1.0` is safe for low-traffic deployments using a local Gemma judge. Sampling is deterministic via SHA-256 of `agent_id:run_id`. |
+| `EVAL_LIVE_SAMPLE_RATE_<AGENT>` | Optional | — | Per-agent sample rate override. Replace `<AGENT>` with the uppercased agent ID (e.g. `EVAL_LIVE_SAMPLE_RATE_CURATOR=0.5`). Takes precedence over the global rate for that agent. |
+| `EVAL_LIVE_MAX_ATTEMPTS` | Optional | `3` | Maximum judge attempts per row before it is marked `failed_max_attempts` and skipped permanently. |
+| `EVAL_LIVE_ALLOW_CONTENT_READ` | Optional | `false` | Set to `true` to allow the judge to read full message content for agents that normally restrict it (e.g. `ingest`). Default redacts output to metadata shape only for those agents. |
+| `EVAL_LIVE_MAX_PAYLOAD_CHARS` | Optional | `12000` | Maximum total character length of the judge payload. Rows exceeding this are skipped with `payload_too_large`. |
 
-### Persistence paths
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `UAB_DB_PATH` | Optional | `~/Documents/uab-state/agno.db` | SQLite database path for Agno agent session memory. Always-on; used as fallback when Postgres is not configured, and as the `db=` for every Agent. |
-| `POSTGRES_DSN_SESSIONS` | Optional | — | When set, activates `PostgresDb(id="ultra-brain-main")` for the chat session schema (`agno_sessions`). Production-only. Format: `postgresql+psycopg://uab:<password>@127.0.0.1:5432/agno_sessions`. |
-| `POSTGRES_DSN_KNOWLEDGE` | Optional | — | DSN for the pgvector knowledge schema (`agno_knowledge`). Required for vault RAG on the VPS. Format: `postgresql+psycopg://uab:<password>@127.0.0.1:5432/agno_knowledge`. |
-| `SECOND_BRAIN_DIR` | Optional | `/srv/second-brain` | Vault path (production convention). The CLI's `--vault` flag overrides this; on local Mac the `vault/` symlink in the project root handles it. |
-| `COST_LEDGER` | Optional | `/srv/second-brain/_system/cost-ledger.md` | Markdown file where cost accounting is appended. |
-| `UAB_LOG_DIR` | Optional | `/var/log/ultra-agents-brain` | Log directory used by systemd service units. |
-| `UAB_PROJECT_ROOT` | Optional | `/opt/ultra-agents-brain` | Root directory used in deploy scripts and systemd units. |
-| `UAB_SERVICE_USER` | Optional | `uabrain` | System user that owns the deployed service processes. |
+**Experience notes path:** after judging, `live_judge.py` writes a structured Markdown note to `<SECOND_BRAIN_DIR>/_system/experiences/<agent_id>/<date>-<run_id>.md` and immediately reindexes the vault so the experience is searchable on the next agent run.
 
 ### Cost controls
 
@@ -159,6 +175,21 @@ general_settings:
 
 ---
 
+## Systemd service units
+
+All units read `/opt/ultra-agents-brain/.env` via `EnvironmentFile=`. The services below are deployed to the VPS; timers trigger the oneshot services on schedule.
+
+| Unit | Type | Schedule / trigger | Description |
+|---|---|---|---|
+| `uab-brain.service` | `simple` | Always-on (auto-restart) | AgentOS FastAPI server. Hardcodes `AGENTOS_HOST=127.0.0.1` and `AGENTOS_PORT=7000` at the service level (overrides `.env` value on the VPS). |
+| `uab-telegram.service` | `simple` | Always-on (auto-restart) | Telegram adapter. Hardcodes `AGENTOS_BASE_URL=http://127.0.0.1:7000`. Requires `uab-brain.service`. |
+| `uab-digest.service` + `.timer` | `oneshot` | Daily at 20:00 UTC | Triggers the curator agent's `digest` task via `POST /agents/curator/runs`. |
+| `uab-monitor.service` + `.timer` | `oneshot` | Every 4 hours | Triggers the curator agent's `poll_feeds` task. |
+| `uab-review.service` + `.timer` | `oneshot` | Sundays at 18:00 UTC | Triggers the curator agent's weekly `review` task. |
+| `uab-live-judge.service` + `.timer` | `oneshot` | Every 2 minutes (after boot) | Runs `python -m agentos live-judge --once --limit 20`. Processes up to 20 pending performance eval rows per invocation. `ReadWritePaths` includes `/srv/second-brain` for experience note writes. Requires `EVAL_LIVE_JUDGE_ENABLED=true` in `.env` to do useful work. |
+
+---
+
 ## Required vs Optional Settings
 
 The following variables cause startup failure if absent:
@@ -167,7 +198,7 @@ The following variables cause startup failure if absent:
 |---|---|---|
 | `LITELLM_MASTER_KEY` | `agentos/model.py` | `KeyError: 'LITELLM_MASTER_KEY'` — hard `os.environ["LITELLM_MASTER_KEY"]` lookup with no default |
 
-All other variables have defaults or are purely optional integrations (Telegram, cloud keys, vault sync).
+All other variables have defaults or are purely optional integrations (Telegram, cloud keys, vault sync, eval system).
 
 ---
 
@@ -175,8 +206,8 @@ All other variables have defaults or are purely optional integrations (Telegram,
 
 | Environment | Approach |
 |---|---|
-| **Local development (Mac)** | `LM_STUDIO_API_BASE=http://localhost:1234/v1`. Use `lm-studio` as `LM_STUDIO_API_KEY`. Cloud keys optional. |
-| **VPS / production** | `LM_STUDIO_API_BASE` set to the LM Link endpoint from LM Studio. `SECOND_BRAIN_DIR=/srv/second-brain`. Systemd unit reads `.env` from `UAB_PROJECT_ROOT`. |
-| **macOS port conflict** | `AGENTOS_PORT=7001` to avoid conflict with macOS ControlCenter which occupies port 7000. |
+| **Local development (Mac)** | `LM_STUDIO_API_BASE=http://localhost:1234/v1`. Use `lm-studio` as `LM_STUDIO_API_KEY`. Cloud keys optional. `EVAL_LIVE_JUDGE_ENABLED=false` (default). |
+| **VPS / production** | `LM_STUDIO_API_BASE` set to the LM Link endpoint from LM Studio. `SECOND_BRAIN_DIR=/srv/second-brain`. `EVAL_LIVE_JUDGE_ENABLED=true`, `EVAL_LIVE_SAMPLE_RATE=1.0` for full coverage with local judge. `POSTGRES_DSN_SESSIONS` set for session and eval run persistence. Systemd unit reads `.env` from `UAB_PROJECT_ROOT`. |
+| **macOS port conflict** | `AGENTOS_PORT=7001` to avoid conflict with macOS ControlCenter which occupies port 7000. Note: the VPS systemd unit (`uab-brain.service`) hardcodes `AGENTOS_PORT=7000` at the unit level, which takes precedence over `.env` on Linux. |
 
 There are no `.env.development` or `.env.production` files — all overrides are applied by editing the single `.env` file on each host.

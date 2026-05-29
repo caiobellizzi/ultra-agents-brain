@@ -1,130 +1,164 @@
 <!-- generated-by: gsd-doc-writer -->
 # ultra-agents-brain
 
-A second-brain agent system that runs AI agents over a local Markdown vault, exposed via an AgentOS HTTP API and a Telegram bot interface.
+A self-hosted, multi-agent second brain built on [Agno](https://github.com/agno-agi/agno) and LiteLLM. Six specialized agents — coordinated by a supervisor team — read and write an Obsidian vault, answer questions, ingest new content, run research, and score themselves with a timer-fired LLM eval judge.
 
-## Installation
-
-Requires Python 3.11+.
+## Install
 
 ```bash
-git clone <repo-url>
+git clone <repo-url> ultra-agents-brain
 cd ultra-agents-brain
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # then fill secrets
 ```
 
-Copy the environment template and fill in secrets:
-
-```bash
-cp .env.example .env
-```
-
-## Quick Start
-
-1. Start the LiteLLM proxy and AgentOS services:
-
-```bash
-docker compose -f deploy/docker-compose.yml up -d
-```
-
-2. Run the AgentOS host (FastAPI):
-
-```bash
-uvicorn agentos.app:app --host 0.0.0.0 --port 7001
-```
-
-3. Run a CLI command against the vault:
-
-```bash
-python -m ultra_brain query "What did I write about X?"
-```
-
-## Usage Examples
-
-**Ingest a file into the knowledge base:**
-
-```bash
-python -m ultra_brain ingest path/to/note.md
-```
-
-**Query the vault with a natural-language question:**
-
-```bash
-python -m ultra_brain query "Summarize my notes on project planning"
-```
-
-**Check LLM spending against the daily cap:**
-
-```bash
-python -m ultra_brain cost-summary
-```
-
-**Run a telos alignment check:**
-
-```bash
-python -m ultra_brain telos-check
-```
-
-## CLI Commands
-
-| Command | Description |
-|---|---|
-| `ensure-vault` | Verify vault directory is present and accessible |
-| `ingest` | Ingest a URL or Markdown file into the vault |
-| `query` | Query the vault with a natural-language question |
-| `lint` | Lint vault Markdown files (writes `vault/_system/lint-report.md`) |
-| `digest` | Generate a daily digest from vault contents |
-| `daily-brief` | Synthesize the day's brief and deliver it to Telegram (`--no-telegram` to skip) |
-| `cost-summary` | Print LLM spending summary from the cost ledger |
-| `research-plan` | Plan a multi-worker research run for a topic |
-| `research-aggregate` | Aggregate worker outputs into a Research project under `vault/Projects/Research/` |
-| `telos-check` | Score an action against the stored telos doc |
-| `telos-interview` | Interactive telos capture interview |
-| `monitor` | Poll configured RSS feeds and file new items to `vault/_inbox/` |
-| `bluesky` | Poll configured Bluesky handles and file new posts to `vault/_inbox/` |
-| `review` | Write a weekly strategic review to `vault/_system/weekly-review.md` |
-
-For operator-side flows (cadence, recovery, adding sources) see [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
-For the source-to-vault map see [docs/SOURCES.md](docs/SOURCES.md).
-
-## Architecture
-
-The system has three runtime layers:
-
-- **AgentOS** (`agentos/`) — FastAPI app hosting six Agno surfaces: agents `chat`, `ingest`, `query`, `research`, `curator`, plus a `supervisor` team (`agentos/agents/supervisor.py`) that delegates across them. Exposes the standard Agno HTTP surface compatible with the hosted dashboard at `https://os.agno.com`. Default bind port `7001` (macOS Control Center occupies 7000).
-- **LiteLLM proxy** — Docker service that routes model calls across a 5-tier matrix (Agno dashboard reports `provider: LiteLLM` for every agent; the real upstream depends on the tier): `orchestrator` (NVIDIA NIM DeepSeek V4 Pro → GLM-5.1 → cloud-sonnet), `research-worker` (NIM DeepSeek V4 Flash → Llama 3.1 405B → cloud-sonnet), `default-worker` (local LM Studio Gemma → NIM Llama 3.3 70B → Mistral 2 Large → cloud-groq), `cheap-worker` and `private-worker` (local-only). NIM is treated as cloud-allowed (equivalent privacy posture to Anthropic/Groq); `private-worker` stays strictly local by contract.
-- **Telegram bot / channels** — Calls `POST /agents/{agent_id}/runs` on the AgentOS host. Configured via `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_CHAT_IDS`.
-
-The `ultra_brain/` package provides standalone CLI wrappers and reusable helpers (cost tracking, vault sync, trust checks, Markdown utilities) that the agents and scripts share.
+**Runtime requirements:** Python 3.11+, PostgreSQL (prod) or SQLite (local), LiteLLM proxy.
 
 ## Configuration
 
-All configuration is via environment variables. Copy `.env.example` to `.env` and fill in values.
+Copy `.env.example` to `.env` and populate the required variables:
 
-Key variables:
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `LITELLM_MASTER_KEY` | Yes | — | LiteLLM proxy master key |
+| `LITELLM_BASE_URL` | No | `http://127.0.0.1:4000/v1` | LiteLLM proxy base URL |
+| `ANTHROPIC_API_KEY` | Yes* | — | Anthropic provider key |
+| `OPENAI_API_KEY` | Yes* | — | OpenAI provider key |
+| `NVIDIA_NIM_API_KEY` | Yes* | — | NVIDIA NIM key (orchestrator/research tiers) |
+| `GROQ_API_KEY` | No | — | Groq provider key |
+| `OPENROUTER_API_KEY` | No | — | OpenRouter provider key |
+| `TELEGRAM_BOT_TOKEN` | No | — | Telegram bot token |
+| `TELEGRAM_ALLOWED_CHAT_IDS` | No | — | Comma-separated allowed chat IDs |
+| `SECOND_BRAIN_DIR` | No | `./vault` | Path to the Obsidian vault |
+| `POSTGRES_DSN_SESSIONS` | No | SQLite fallback | PostgreSQL DSN for agent sessions |
+| `POSTGRES_DSN_KNOWLEDGE` | No | — | PostgreSQL DSN for vector knowledge base |
+| `EVAL_LIVE_JUDGE_ENABLED` | No | `false` | Enable timer-fired LLM eval scoring |
+| `EVAL_LIVE_SAMPLE_RATE` | No | `0.0` | Fraction of runs to score (0.0–1.0) |
+| `AGENTOS_HOST` | No | `127.0.0.1` | FastAPI bind host |
+| `AGENTOS_PORT` | No | `7000` | FastAPI bind port |
 
-| Variable | Required | Description |
+\* At least one LLM provider key is required; which ones depend on your LiteLLM `config.yaml`.
+
+## Running
+
+### Local dev
+
+```bash
+# Start LiteLLM proxy first (separate terminal)
+python -m agentos                 # FastAPI on http://127.0.0.1:7000
+
+# One-shot eval judge pass
+python -m agentos live-judge --once
+
+# Continuous eval judge loop
+python -m agentos live-judge --loop --interval 60
+```
+
+### Tests
+
+```bash
+make test          # unit tests (excludes test_core.py)
+make eval-smoke    # fast smoke evals
+make eval-full     # full eval suite with orchestrator judge tier
+make check-surfaces  # surface smoke-check script
+```
+
+### VPS (systemd)
+
+```bash
+# Deploy and enable all units
+systemctl enable --now uab-brain.service
+systemctl enable --now uab-telegram.service
+systemctl enable --now uab-live-judge.timer   # fires every 2 min
+systemctl enable --now uab-digest.timer
+systemctl enable --now uab-monitor.timer
+systemctl enable --now uab-review.timer
+```
+
+All services run as user `uabrain`, read from `/opt/ultra-agents-brain/.env`, and write to `/srv/second-brain` and `/var/lib/uab`.
+
+## Agent Roster
+
+| Agent | Type | Model tier | Role |
+|---|---|---|---|
+| **supervisor** | `Team` | `orchestrator` | Routes requests to leaf agents; central entry point |
+| **chat** | `Agent` | `default-worker` | Answers from the vault; falls back to general chat |
+| **query** | `Agent` | `default-worker` | Strict vault RAG with citations |
+| **research** | `Agent` | `research-worker` | Multi-angle research with ReasoningTools + vault RAG |
+| **ingest** | `Agent` | `default-worker` | Ingests URLs and files into the vault |
+| **curator** | `Agent` | `cheap-worker` | Daily digest, weekly review, RSS polling, vault lint |
+
+All five leaf agents have `enable_agentic_culture=True`, allowing them to read shared experience notes and adapt behaviour over time.
+
+## Architecture
+
+```
+Telegram / HTTP client
+        │
+        ▼
+  channels/telegram_adapter  ──►  AgentOS FastAPI (port 7000)
+                                         │
+                              ┌──────────┴──────────┐
+                              │     supervisor Team  │  (orchestrator tier)
+                              └──┬──┬──┬──┬──┬──────┘
+                                 │  │  │  │  │
+                   chat ─────────┘  │  │  │  └─── curator
+                   query ───────────┘  │  └─────── ingest
+                   research ───────────┘
+
+        All agents ──► LiteLLM proxy ──► provider APIs
+        All agents ──► Postgres (sessions) + Postgres/SQLite (knowledge)
+        All agents ──► /srv/second-brain  (Obsidian vault)
+
+  eval_recorder (monkey-patch on Agent/Team.run / .arun)
+        │ writes eval rows
+        ▼
+  DB (eval_runs table)
+        │ polled every 2 min
+        ▼
+  live_judge (uab-live-judge.timer)
+        │ LLM judge scores each row
+        ▼
+  vault/_system/experience/  (experience notes)
+```
+
+## Eval System
+
+The eval pipeline runs continuously in the background:
+
+1. **`eval_recorder`** — monkey-patches `Agent.run` / `arun` at class level; writes a row to the eval DB for every agent invocation.
+2. **`eval_rubrics`** — defines per-agent rubrics (`chat-helpfulness-v1`, `query-groundedness-v1`, `ingest-fidelity-v1`, `curator-quality-v1`, `research-grounding-v1`).
+3. **`eval_live_policy`** — controls sampling rate and enabled state via env vars (`EVAL_LIVE_JUDGE_ENABLED`, `EVAL_LIVE_SAMPLE_RATE`).
+4. **`live_judge`** — timer-fired worker (`uab-live-judge.timer`, every 2 min) that runs an LLM judge against pending rows and writes scores back to the DB and experience notes to the vault.
+
+Enable auto-scoring on the VPS:
+
+```bash
+# In /opt/ultra-agents-brain/.env
+EVAL_LIVE_JUDGE_ENABLED=true
+EVAL_LIVE_SAMPLE_RATE=1.0   # safe for low-traffic; use 0.1–0.3 for high-traffic
+```
+
+## Systemd Units
+
+| Unit | Type | Description |
 |---|---|---|
-| `LITELLM_BASE_URL` | Yes | LiteLLM proxy endpoint (default: `http://127.0.0.1:4000/v1`) |
-| `LITELLM_MASTER_KEY` | Yes | Auth key for LiteLLM proxy |
-| `ANTHROPIC_API_KEY` | — | Anthropic API key (at least one provider key required) |
-| `OPENAI_API_KEY` | — | OpenAI API key |
-| `GROQ_API_KEY` | — | Groq API key |
-| `OPENROUTER_API_KEY` | — | OpenRouter API key |
-| `NVIDIA_NIM_API_KEY` | — | NVIDIA NIM (build.nvidia.com) API key — free 40 RPM/model; required for `orchestrator`, `research-worker`, and `default-worker` NIM fallback aliases |
-| `XAI_API_KEY` | — | xAI Grok (api.x.ai) API key — placeholder; requires paid credits before any `xai/grok-*` alias can be added to LiteLLM config |
-| `LITELLM_ORCHESTRATOR_MODEL` / `LITELLM_RESEARCH_MODEL` / `LITELLM_DEFAULT_MODEL` / `LITELLM_CHEAP_MODEL` / `LITELLM_PRIVATE_MODEL` | — | Per-tier LiteLLM alias overrides (default to the tier name itself) |
-| `LM_STUDIO_API_BASE` | — | LM Studio local endpoint |
-| `TELEGRAM_BOT_TOKEN` | — | Telegram bot token for the channel adapter |
-| `TELEGRAM_ALLOWED_CHAT_IDS` | — | Comma-separated list of allowed Telegram chat IDs |
-| `SECOND_BRAIN_DIR` | Yes | Path to the local Markdown vault |
-| `WORKSHOP_REPO_REGISTRY` | — | Path to the Workshop repo registry JSON persisted via the localhost `PUT /workshop/repos` route (default: `/srv/second-brain/_system/workshop-repos.json`) |
-| `COST_LEDGER` | Yes | Path to the cost ledger Markdown file |
-| `DAILY_COST_CAP_USD` | Yes | Hard daily spending cap in USD (default: `20`) |
+| `uab-brain.service` | service | AgentOS FastAPI server |
+| `uab-telegram.service` | service | Telegram adapter |
+| `uab-live-judge.service` + `.timer` | oneshot + timer | Eval judge, every 2 min |
+| `uab-digest.service` + `.timer` | oneshot + timer | Daily digest via curator |
+| `uab-monitor.service` + `.timer` | oneshot + timer | Feed monitor via curator |
+| `uab-review.service` + `.timer` | oneshot + timer | Weekly review via curator |
 
-See `.env.example` for the full list including vault sync and deployment settings.
+## Contributing
 
-## License
+```bash
+# Lint / format
+pre-commit run --all-files
 
-Private — all rights reserved.
+# Run tests before pushing
+make test && make eval-smoke
+```
+
+See `docs/` for architecture deep-dives and phase retrospectives.
